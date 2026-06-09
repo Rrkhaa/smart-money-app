@@ -73,10 +73,16 @@ if st.session_state.user is None:
             st.rerun()
 
     c1, c2, c3 = st.columns([1, 2, 1])
+    c1, c2, c3 = st.columns([1, 2, 1])
     with c2:
+        # Menambahkan logo di tengah halaman login
+        col_img1, col_img2, col_img3 = st.columns([1, 1.5, 1])
+        with col_img2:
+            st.image("logo.jpeg", use_container_width=True)
+
         st.markdown(f"""
-            <div style="text-align: center; margin-top: 50px; margin-bottom: 20px;">
-                <h1 style="background: linear-gradient(45deg, #10B981, #3B82F6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 44px; font-weight: 800; margin-bottom: 5px;">💎 Smart Money</h1>
+            <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
+                <h1 style="background: linear-gradient(45deg, #10B981, #3B82F6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 44px; font-weight: 800; margin-bottom: 5px;">Smart Money</h1>
                 <p style="opacity: 0.8; font-size: 15px;">{t("Kelola keuangan Anda secara cerdas, otomatis, dan aman", "Manage your finances smartly, automatically, and securely")}</p>
             </div>
         """, unsafe_allow_html=True)
@@ -282,7 +288,13 @@ if st.session_state.get("go_to_chatbot", False):
     st.session_state.go_to_chatbot = False
 
 with st.sidebar:
-    st.markdown("## 💎 Smart Money")
+    # Menambahkan logo di atas tulisan Sidebar
+    col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
+    with col_logo2:
+        st.image("logo.jpeg", use_container_width=True)
+        
+    # Mengganti h2 dan meratakan teks agar pas di bawah logo
+    st.markdown("<h2 style='text-align: center; margin-top: -15px;'>Smart Money</h2>", unsafe_allow_html=True)
     st.markdown("---")
     
     selected_label = option_menu(
@@ -318,11 +330,22 @@ with st.sidebar:
         st.rerun()
         
     st.markdown("---")
+    
+    # 1. Ambil email user
     user_email = st.session_state.user.email if st.session_state.user else "user@example.com"
-    user_meta = st.session_state.user.user_metadata if (st.session_state.user and st.session_state.user.user_metadata) else {}
-    user_name = user_meta.get("full_name", "") if user_meta else ""
-    display_name = user_name if user_name else "User"
+    
+    # 2. Ambil nama user dari metadata Supabase atau session state
+    if "full_name" in st.session_state:
+        display_name = st.session_state.full_name
+    else:
+        user_metadata = st.session_state.user.user_metadata if hasattr(st.session_state.user, 'user_metadata') and st.session_state.user.user_metadata else {}
+        display_name = user_metadata.get("full_name", "User")
+        # Simpan ke session state agar tidak perlu ngecek berulang-ulang
+        st.session_state.full_name = display_name
+    
+    # 3. Tampilkan nama dan email secara dinamis
     st.markdown(f"🧑‍💼 **{display_name}**\n\n{user_email}")
+    
     st.write("")
     if st.button(t("🚪 Keluar", "🚪 Logout"), use_container_width=True):
         st.session_state.user = None
@@ -766,39 +789,58 @@ elif selected == "budget":
  
         if st.session_state.get('show_budget_form', False):
             with st.container(border=True):
-                form_title = t("Atur Target Anggaran Kategori", "Set Category Budget Target")
-                st.markdown(f"#### {form_title}")
-                with st.form("form_set_budget"):
-                    col_f1, col_f2 = st.columns(2)
-                    with col_f1:
-                        lbl_pilih_kat = t("Pilih Kategori", "Select Category")
-                        kat_pilihan = st.selectbox(lbl_pilih_kat, [
-                            'Kebutuhan Pokok', 'Sewa', 'Transportasi', 'Olahraga', 
-                            'Tagihan', 'Kesehatan', 'Cicilan', 'Makan', 'Hiburan', 'Investasi'
-                        ])
-                    with col_f2:
-                        default_nom = int(budget_dict.get(kat_pilihan, 0))
-                        lbl_nom_target = t("Nominal Target Anggaran (Rp)", "Budget Target Amount (Rp)")
-                        nom_target = st.number_input(lbl_nom_target, min_value=0, value=default_nom, step=50000)
+                # Menyesuaikan judul dengan bulan dari data terakhir
+                st.markdown(f"#### Anggaran untuk {nama_bulan}")
+                
+                with st.form("form_set_budget_massal"):
+                    # Membagi menjadi 2 kolom sesuai gambar
+                    col_kiri, col_kanan = st.columns(2)
                     
-                    btn_simpan_budget = t("Simpan Target Anggaran", "Save Budget Target")
-                    submit_budget = st.form_submit_button(btn_simpan_budget, type="primary")
+                    with col_kiri:
+                        b_pokok = st.number_input("🛒 Kebutuhan Pokok", min_value=0, step=50000, value=int(budget_dict.get("Kebutuhan Pokok", 0)))
+                        b_trans = st.number_input("🚗 Transportasi", min_value=0, step=50000, value=int(budget_dict.get("Transportasi", 0)))
+                        b_tagihan = st.number_input("📱 Tagihan", min_value=0, step=50000, value=int(budget_dict.get("Tagihan", 0)))
+                        b_cicilan = st.number_input("💳 Cicilan", min_value=0, step=50000, value=int(budget_dict.get("Cicilan", 0)))
+                        b_hiburan = st.number_input("🎮 Hiburan", min_value=0, step=50000, value=int(budget_dict.get("Hiburan", 0)))
+                    with col_kanan:
+                        b_sewa = st.number_input("🏠 Sewa", min_value=0, step=50000, value=int(budget_dict.get("Sewa", 0)))
+                        b_olahraga = st.number_input("🏃 Olahraga", min_value=0, step=50000, value=int(budget_dict.get("Olahraga", 0)))
+                        b_kesehatan = st.number_input("🏥 Kesehatan", min_value=0, step=50000, value=int(budget_dict.get("Kesehatan", 0)))
+                        b_makan = st.number_input("🍽️ Makan", min_value=0, step=50000, value=int(budget_dict.get("Makan", 0)))
+                        b_investasi = st.number_input("📈 Investasi", min_value=0, step=50000, value=int(budget_dict.get("Investasi", 0)))
+                        
+                    # Tombol submit yang mengambil lebar penuh wadah (use_container_width=True)
+                    btn_simpan_teks = t("💾 Simpan Anggaran", "💾 Save Budget")
+                    submit_budget = st.form_submit_button(btn_simpan_teks, type="primary", use_container_width=True)
+                    
                     if submit_budget:
                         try:
                             supabase = st.session_state.supabase
                             user_id = st.session_state.user.id
-                            supabase.table("budget").upsert({
-                                "user_id": user_id,
-                                "kategori": kat_pilihan,
-                                "nominal": int(nom_target)
-                            }).execute()
-                            msg_sukses_budget = t(f"Anggaran {kat_pilihan} berhasil diatur menjadi {format_rp(nom_target)}!", f"Budget for {kat_pilihan} successfully set to {format_rp(nom_target)}!")
-                            st.success(msg_sukses_budget)
+                            
+                            # Menggabungkan data menjadi satu list untuk proses upsert massal (batch)
+                            data_upsert = [
+                                {"user_id": user_id, "kategori": "Kebutuhan Pokok", "nominal": b_pokok},
+                                {"user_id": user_id, "kategori": "Transportasi", "nominal": b_trans},
+                                {"user_id": user_id, "kategori": "Tagihan", "nominal": b_tagihan},
+                                {"user_id": user_id, "kategori": "Cicilan", "nominal": b_cicilan},
+                                {"user_id": user_id, "kategori": "Hiburan", "nominal": b_hiburan},
+                                {"user_id": user_id, "kategori": "Sewa", "nominal": b_sewa},
+                                {"user_id": user_id, "kategori": "Olahraga", "nominal": b_olahraga},
+                                {"user_id": user_id, "kategori": "Kesehatan", "nominal": b_kesehatan},
+                                {"user_id": user_id, "kategori": "Makan", "nominal": b_makan},
+                                {"user_id": user_id, "kategori": "Investasi", "nominal": b_investasi}
+                            ]
+                            
+                            # Melakukan upsert data sekaligus ke tabel budget
+                            supabase.table("budget").upsert(data_upsert).execute()
+                            
+                            st.success(t("Semua anggaran berhasil diperbarui!", "All budgets successfully updated!"))
                             st.session_state.show_budget_form = False
                             st.rerun()
                         except Exception as e:
                             st.error(f"Gagal menyimpan anggaran ke Supabase: {e}")
- 
+     
         total_pemasukan_bulan_ini = latest_data_budget.get('Pemasukan', 0) 
         total_allocated = sum(budget_dict.values())
         total_spent = sum([latest_data_budget.get(kat, 0) for kat in budget_dict.keys()])
@@ -1040,6 +1082,21 @@ elif selected == "analysis":
                 st.write("") 
                 lbl_pilih_thn = t("Pilih Tahun", "Select Year")
                 tahun_terpilih = st.selectbox(lbl_pilih_thn, pilihan_tahun, label_visibility="collapsed")
+                
+                # --- TAMBAHAN TOMBOL DOWNLOAD PDF ---
+                btn_pdf_label = t("📥 Unduh PDF", "📥 Download PDF")
+                if st.button(btn_pdf_label, use_container_width=True):
+                    # Memanggil fitur Print / Save as PDF bawaan browser
+                    import streamlit.components.v1 as components
+                    components.html(
+                        """
+                        <script>
+                            window.parent.print();
+                        </script>
+                        """,
+                        height=0
+                    )
+                # ------------------------------------
             
             st.write("---")
  
@@ -1360,195 +1417,63 @@ Panduan menjawab:
 elif selected == "settings":
     lang = st.session_state.language
     curr = st.session_state.currency
-
-    # Load metadata
-    user_metadata = st.session_state.user.user_metadata if (st.session_state.user and st.session_state.user.user_metadata) else {}
-    
-    # Name
-    full_name_val = user_metadata.get("full_name", "User SmartMoney")
-    
-    # Notifications
-    notifications_pref = user_metadata.get("notifications", {"budget": True, "transaction": True, "weekly": False})
-    if not isinstance(notifications_pref, dict):
-        notifications_pref = {"budget": True, "transaction": True, "weekly": False}
-    
-    # Theme
-    theme_val = user_metadata.get("theme", t("Bawaan Sistem", "System Default"))
-
-    # Load MFA status
-    mfa_active = False
-    active_factors = []
-    try:
-        supabase = st.session_state.supabase
-        factors_res = supabase.auth.mfa.list_factors()
-        active_factors = factors_res.all if factors_res else []
-        mfa_active = any(f.status == "verified" for f in active_factors)
-    except Exception as e:
-        pass
-
+ 
     st.title(t("⚙️ Settings Akun", "⚙️ Account Settings"))
-    
     col_kiri, col_kanan = st.columns(2)
-
+ 
     with col_kiri:
         # --- Profile ---
         st.markdown('<div class="summary-card">', unsafe_allow_html=True)
         st.subheader(t("👤 Profil", "👤 Profile Settings"))
-        nama_lengkap_input = st.text_input(t("Nama Lengkap", "Full Name"), value=full_name_val)
+        
+        # 1. Ambil nama dari metadata Supabase (jika sudah pernah diset sebelumnya)
+        user_metadata = st.session_state.user.user_metadata if hasattr(st.session_state.user, 'user_metadata') and st.session_state.user.user_metadata else {}
+        current_name = user_metadata.get("full_name", "User SmartMoney")
+        
+        # Simpan di session_state agar tampilannya stabil
+        if "full_name" not in st.session_state:
+            st.session_state.full_name = current_name
+            
+        # 2. Tangkap inputan nama baru ke dalam variabel 'new_name'
+        new_name = st.text_input(t("Nama Lengkap", "Full Name"), value=st.session_state.full_name)
         st.text_input("Email", value=st.session_state.user.email, disabled=True)
-        save_profile_clicked = st.button(t("Simpan Perubahan", "Save Changes"), type="primary", key="btn_save_profile")
+        
+        # 3. Beri aksi saat tombol diklik
+        if st.button(t("Simpan Perubahan", "Save Changes"), type="primary"):
+            if new_name.strip() == "":
+                st.error(t("Nama tidak boleh kosong!", "Name cannot be empty!"))
+            else:
+                try:
+                    supabase = st.session_state.supabase
+                    # Update metadata user di Supabase
+                    supabase.auth.update_user({
+                        "data": {"full_name": new_name}
+                    })
+                    
+                    # Update data di session aplikasi agar langsung berubah
+                    st.session_state.full_name = new_name
+                    st.success(t("Profil berhasil diperbarui!", "Profile successfully updated!"))
+                except Exception as e:
+                    st.error(f"Gagal menyimpan profil: {e}")
+                    
         st.markdown('</div>', unsafe_allow_html=True)
-
+ 
         # --- Security ---
         st.markdown('<div class="summary-card">', unsafe_allow_html=True)
         st.subheader(t("🔒 Keamanan", "🔒 Security"))
-        
-        # Display MFA status badge
-        if mfa_active:
-            st.success(t("🔒 Autentikasi Dua Faktor: AKTIF", "🔒 Two-Factor Authentication: ACTIVE"))
-        else:
-            st.info(t("🔓 Autentikasi Dua Faktor: NONAKTIF", "🔓 Two-Factor Authentication: INACTIVE"))
-            
-        col_sec1, col_sec2 = st.columns(2)
-        with col_sec1:
-            btn_ganti_pw = st.button(t("Ganti Password", "Change Password"), use_container_width=True)
-        with col_sec2:
-            mfa_btn_label = t("Nonaktifkan 2FA", "Disable 2FA") if mfa_active else t("Aktifkan 2FA", "Enable 2FA")
-            btn_mfa = st.button(mfa_btn_label, use_container_width=True, type="secondary" if mfa_active else "primary")
-        
-        # Password form rendering if requested
-        if btn_ganti_pw:
-            st.session_state.show_pw_form = not st.session_state.get("show_pw_form", False)
-            st.session_state.show_mfa_form = False
-            
-        if st.session_state.get("show_pw_form", False):
-            with st.container(border=True):
-                st.markdown(f"##### 🔑 {t('Ganti Password', 'Change Password')}")
-                with st.form("form_change_pw"):
-                    new_pw = st.text_input(t("Password Baru (Min 6 Karakter)", "New Password (Min 6 Characters)"), type="password")
-                    confirm_pw = st.text_input(t("Konfirmasi Password Baru", "Confirm New Password"), type="password")
-                    submit_pw_btn = st.form_submit_button(t("Simpan Password Baru", "Save New Password"), type="primary")
-                    
-                    if submit_pw_btn:
-                        if len(new_pw) < 6:
-                            st.error(t("Password minimal harus 6 karakter!", "Password must be at least 6 characters!"))
-                        elif new_pw != confirm_pw:
-                            st.error(t("Konfirmasi password tidak cocok!", "Password confirmation does not match!"))
-                        else:
-                            try:
-                                supabase = st.session_state.supabase
-                                supabase.auth.update_user({"password": new_pw})
-                                st.success(t("Password berhasil diperbarui!", "Password successfully updated!"))
-                                st.session_state.show_pw_form = False
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"{t('Gagal mengganti password', 'Failed to change password')}: {e}")
-                                
-        # MFA form rendering if requested
-        if btn_mfa:
-            if mfa_active:
-                # Direct action: disable MFA
-                try:
-                    supabase = st.session_state.supabase
-                    for f in active_factors:
-                        supabase.auth.mfa.unenroll({"factor_id": f.id})
-                    st.success(t("Autentikasi Dua Faktor berhasil dinonaktifkan!", "Two-Factor Authentication successfully disabled!"))
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Gagal menonaktifkan MFA: {e}")
-            else:
-                # Start enroll flow
-                try:
-                    supabase = st.session_state.supabase
-                    enroll_res = supabase.auth.mfa.enroll({
-                        "factor_type": "totp",
-                        "issuer": "SmartMoney",
-                        "friendly_name": st.session_state.user.email
-                    })
-                    st.session_state.mfa_enrollment = enroll_res
-                    st.session_state.show_mfa_form = True
-                    st.session_state.show_pw_form = False
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Gagal menginisialisasi 2FA: {e}")
-                    
-        if st.session_state.get("show_mfa_form", False) and st.session_state.get("mfa_enrollment", None):
-            with st.container(border=True):
-                st.markdown(f"##### 🛡️ {t('Setup Autentikasi Dua Faktor (2FA)', 'Setup Two-Factor Authentication (2FA)')}")
-                mfa_enroll = st.session_state.mfa_enrollment
-                
-                # Show QR code
-                qr_code_svg = mfa_enroll.totp.qr_code
-                st.write(t("1. Pindai kode QR ini dengan aplikasi Authenticator Anda (seperti Google Authenticator atau Authy):", 
-                           "1. Scan this QR code with your Authenticator app (like Google Authenticator or Authy):"))
-                
-                # Render SVG nicely on light/dark mode
-                st.markdown(
-                    f'<div style="text-align: center; margin: 15px 0;">'
-                    f'<img src="{qr_code_svg}" width="200" style="background-color: white; padding: 15px; border-radius: 8px;" />'
-                    f'</div>',
-                    unsafe_allow_html=True
-                )
-                
-                st.write(t("Atau masukkan kode rahasia ini secara manual:", "Or enter this secret key manually:"))
-                st.code(mfa_enroll.totp.secret, language="text")
-                
-                st.write(t("2. Masukkan 6-digit kode OTP dari aplikasi Authenticator:", 
-                           "2. Enter the 6-digit OTP code from your Authenticator app:"))
-                
-                with st.form("form_verify_mfa"):
-                    otp_code = st.text_input(t("Kode OTP", "OTP Code"), max_chars=6, placeholder="000000")
-                    col_m1, col_m2 = st.columns(2)
-                    with col_m1:
-                        verify_mfa_btn = st.form_submit_button(t("Verifikasi & Aktifkan", "Verify & Enable"), type="primary", use_container_width=True)
-                    with col_m2:
-                        cancel_mfa_btn = st.form_submit_button(t("Batal", "Cancel"), use_container_width=True)
-                        
-                    if verify_mfa_btn:
-                        if not otp_code or len(otp_code) < 6 or not otp_code.isdigit():
-                            st.error(t("Kode OTP harus berupa 6 digit angka!", "OTP code must be 6 digits!"))
-                        else:
-                            try:
-                                supabase = st.session_state.supabase
-                                supabase.auth.mfa.challenge_and_verify({
-                                    "factor_id": mfa_enroll.id,
-                                    "code": otp_code
-                                })
-                                st.success(t("Autentikasi Dua Faktor berhasil diaktifkan!", "Two-Factor Authentication successfully enabled!"))
-                                st.session_state.show_mfa_form = False
-                                st.session_state.mfa_enrollment = None
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"OTP tidak valid atau kadaluarsa: {e}")
-                                
-                    if cancel_mfa_btn:
-                        st.session_state.show_mfa_form = False
-                        st.session_state.mfa_enrollment = None
-                        st.rerun()
-                        
+        st.button(t("Ganti Password", "Change Password"))
+        st.button(t("Aktifkan Autentikasi Dua Faktor", "Enable Two-Factor Authentication"))
         st.markdown('</div>', unsafe_allow_html=True)
-
+ 
     with col_kanan:
         # --- Notifications ---
         st.markdown('<div class="summary-card">', unsafe_allow_html=True)
         st.subheader(t("🔔 Notifikasi", "🔔 Notifications"))
-        budget_alert_input = st.checkbox(t("Peringatan budget", "Budget alerts"), value=notifications_pref.get("budget", True))
-        transaction_alert_input = st.checkbox(t("Notifikasi transaksi", "Transaction notifications"), value=notifications_pref.get("transaction", True))
-        weekly_report_input = st.checkbox(t("Laporan mingguan", "Weekly reports"), value=notifications_pref.get("weekly", False))
+        st.checkbox(t("Peringatan budget", "Budget alerts"), value=True)
+        st.checkbox(t("Notifikasi transaksi", "Transaction notifications"), value=True)
+        st.checkbox(t("Laporan mingguan", "Weekly reports"), value=False)
         st.markdown('</div>', unsafe_allow_html=True)
-
-        # --- Appearance & Region ---
-        st.markdown('<div class="summary-card">', unsafe_allow_html=True)
-        st.subheader(t("🎨 Tampilan & Wilayah", "🎨 Appearance & Region"))
-        
-        theme_opts = [t("Bawaan Sistem", "System Default"), t("Terang", "Light"), t("Gelap", "Dark")]
-        theme_default_idx = 0
-        if theme_val in theme_opts:
-            theme_default_idx = theme_opts.index(theme_val)
-        theme_val_input = st.selectbox(t("Tema", "Theme"), theme_opts, index=theme_default_idx)
-
-        st.write("")
-
+ 
         # === LANGUAGE TOGGLE ===
         st.markdown(f"**{'🌐 Bahasa Aplikasi' if lang == 'ID' else '🌐 App Language'}**")
         st.caption(t("Bahasa aktif saat ini:", "Current active language:") + f" **{'🇮🇩 Bahasa Indonesia' if lang == 'ID' else '🇺🇸 English'}**")
@@ -1573,9 +1498,9 @@ elif selected == "settings":
         if btn_en and lang != "EN":
             st.session_state.language = "EN"
             st.rerun()
-
+ 
         st.write("")
-
+ 
         # === CURRENCY TOGGLE ===
         st.markdown(f"**{'💱 Mata Uang' if lang == 'ID' else '💱 Currency'}**")
         st.caption(
@@ -1605,26 +1530,5 @@ elif selected == "settings":
         if btn_usd and curr != "USD":
             st.session_state.currency = "USD"
             st.rerun()
-
+ 
         st.markdown('</div>', unsafe_allow_html=True)
-
-    # Process saving profile and preferences if clicked
-    if save_profile_clicked:
-        try:
-            supabase = st.session_state.supabase
-            response = supabase.auth.update_user({
-                "data": {
-                    "full_name": nama_lengkap_input,
-                    "notifications": {
-                        "budget": budget_alert_input,
-                        "transaction": transaction_alert_input,
-                        "weekly": weekly_report_input
-                    },
-                    "theme": theme_val_input
-                }
-            })
-            st.session_state.user = response.user
-            st.success(t("Perubahan profil berhasil disimpan!", "Profile changes successfully saved!"))
-            st.rerun()
-        except Exception as e:
-            st.error(f"{t('Gagal menyimpan profil', 'Failed to save profile')}: {e}")
