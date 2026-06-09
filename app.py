@@ -78,7 +78,7 @@ if st.session_state.user is None:
         # Menambahkan logo di tengah halaman login
         col_img1, col_img2, col_img3 = st.columns([1, 1.5, 1])
         with col_img2:
-            st.image("logo.jpg", use_container_width=True)
+            st.image("logo.png", use_container_width=True)
 
         st.markdown(f"""
             <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
@@ -290,7 +290,7 @@ with st.sidebar:
     # Menambahkan logo di atas tulisan Sidebar
     col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
     with col_logo2:
-        st.image("logo.jpg", use_container_width=True)
+        st.image("logo.png", use_container_width=True)
         
     st.markdown("<h2 style='text-align: center; margin-top: -15px;'>Smart Money</h2>", unsafe_allow_html=True)
     st.markdown("---")
@@ -322,11 +322,11 @@ with st.sidebar:
         accent="#10B981"
     )
     LIGHT = dict(
-        bg="#F0FDF4",             
-        surface="#E8F5E9",        
-        text_primary="#1E293B",   
+        bg="#F7FEE7",             # Latar utama: Hijau muda kekuningan sangat pudar
+        surface="#ECFCCB",        # Kartu & Sidebar: Hijau kekuningan (mirip ujung panah logo)
+        text_primary="#1E293B",   # Teks: Abu-abu kebiruan gelap agar mudah dibaca
         sidebar_border="rgba(6, 78, 59, 0.12)",
-        accent="#10B981"
+        accent="#10B981"          # Aksen tombol tetap hijau terang
     )
     T = DARK if st.session_state.dark_theme else LIGHT
 
