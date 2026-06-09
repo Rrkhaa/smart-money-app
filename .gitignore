@@ -1,0 +1,22 @@
+# Streamlit secrets (SANGAT PENTING - Jangan unggah kunci API Supabase Anda ke GitHub!)
+.streamlit/secrets.toml
+
+# Virtual Environment / Dependensi Lokal
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database Lokal (jika ada SQLite)
+*.db
+*.sqlite3
+
+# Cache Sistem & IDE
+.DS_Store
+.vscode/
+.idea/
