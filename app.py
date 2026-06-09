@@ -78,7 +78,7 @@ if st.session_state.user is None:
         # Menambahkan logo di tengah halaman login
         col_img1, col_img2, col_img3 = st.columns([1, 1.5, 1])
         with col_img2:
-            st.image("logo.jpeg", use_container_width=True)
+            st.image("logo.jpg", use_container_width=True)
 
         st.markdown(f"""
             <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
@@ -270,13 +270,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
  
 # ==========================================
-# SIDEBAR NAVIGATION
+# SIDEBAR NAVIGATION & THEME SYSTEM
 # ==========================================
 if st.session_state.language == "ID":
     menu_labels = ["Dasbor", "Transaksi", "Anggaran & Tabungan", "Analisis & Laporan", "Chatbot AI", "Pengaturan"]
 else:
     menu_labels = ["Dashboard", "Transaction", "Budget & Saving", "Analysis & Reports", "AI Chatbot", "Settings"]
-
 
 menu_keys = ["dashboard", "transaction", "budget", "analysis", "chatbot", "settings"]
 
@@ -291,49 +290,145 @@ with st.sidebar:
     # Menambahkan logo di atas tulisan Sidebar
     col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
     with col_logo2:
-        st.image("logo.jpeg", use_container_width=True)
+        st.image("logo.jpg", use_container_width=True)
         
-    # Mengganti h2 dan meratakan teks agar pas di bawah logo
     st.markdown("<h2 style='text-align: center; margin-top: -15px;'>Smart Money</h2>", unsafe_allow_html=True)
     st.markdown("---")
     
+    # --- TOGGLE TEMA ---
+    if "dark_theme" not in st.session_state:
+        st.session_state.dark_theme = False
+        
+    # Menghapus simbol emoji bulan
+    lbl_tema = t("Mode Gelap", "Dark Mode")
+    
+    # Membungkus dengan kolom agar posisinya di tengah
+    col_t1, col_t2, col_t3 = st.columns([0.2, 2.5, 0.1])
+    with col_t2:
+        dark_mode_aktif = st.toggle(lbl_tema, value=st.session_state.dark_theme)
+    
+    if dark_mode_aktif != st.session_state.dark_theme:
+        st.session_state.dark_theme = dark_mode_aktif
+        st.rerun()
+
+    # ==========================================
+    # PALET WARNA (TEMA HIJAU LOGO)
+    # ==========================================
+    DARK = dict(
+        bg="#022C22",             
+        surface="#064E3B",        
+        text_primary="#F8F9FA",   
+        sidebar_border="rgba(167, 243, 208, 0.16)",
+        accent="#10B981"
+    )
+    LIGHT = dict(
+        bg="#F0FDF4",             
+        surface="#E8F5E9",        
+        text_primary="#1E293B",   
+        sidebar_border="rgba(6, 78, 59, 0.12)",
+        accent="#10B981"
+    )
+    T = DARK if st.session_state.dark_theme else LIGHT
+
+    # --- PERBAIKAN WARNA SIDEBAR MENU ---
+    menu_bg_active = "#065F46" if st.session_state.dark_theme else "#10B981" 
+    menu_hover = "rgba(167, 243, 208, 0.16)" if st.session_state.dark_theme else "rgba(16, 185, 129, 0.15)"
+
     selected_label = option_menu(
         menu_title=None,
-        options=menu_labels, # Gunakan menu_labels di sini
+        options=menu_labels, 
         icons=["house", "receipt", "wallet2", "bar-chart-line", "robot", "gear"],
         menu_icon="cast",
         default_index=st.session_state.menu_index,
-        key=f"sidebar_menu_{st.session_state.menu_index}",
-       styles={
-            "container": {"padding": "10px", "background-color": "transparent"},
-            "icon": {"color": "var(--text-color)", "opacity": "0.8", "font-size": "16px"}, 
+        key=f"sidebar_menu_{st.session_state.menu_index}_{st.session_state.dark_theme}", 
+        styles={
+            # PERUBAHAN UTAMA: Jangan pakai "transparent", paksa warnanya sesuai palet T['surface']
+            "container": {"padding": "10px", "background-color": T['surface']},
+            "icon": {"color": T['text_primary'], "opacity": "0.8", "font-size": "16px"}, 
             "nav-link": {
-                "font-size": "14px", 
-                "text-align": "left", 
-                "margin":"5px 0", 
-                "border-radius": "8px", 
-                "color": "var(--text-color)", 
-                "opacity": "0.8", 
-                "--hover-color": "rgba(128,128,128,0.1)",
-                "white-space": "nowrap" 
+                "font-size": "14px", "text-align": "left", "margin":"5px 0", 
+                "border-radius": "8px", "color": T['text_primary'], 
+                "opacity": "0.8", "--hover-color": menu_hover, "white-space": "nowrap" 
             },
-            "nav-link-selected": { "background-color": "rgba(128,128,128,0.2)", "color": "var(--text-color)", "font-weight": "600", "opacity": "1" },
+            "nav-link-selected": { "background-color": menu_bg_active, "color": "#FFFFFF", "font-weight": "600", "opacity": "1" },
         }
     )
     
-    # 3. Dapatkan 'key' statis berdasarkan label yang dipilih
+    # Dapatkan 'key' statis berdasarkan label yang dipilih
     selected_idx = menu_labels.index(selected_label)
     selected = menu_keys[selected_idx]
     
     if selected_idx != st.session_state.menu_index:
         st.session_state.menu_index = selected_idx
         st.rerun()
-        
+
     st.markdown("---")
+    
+    # --- CSS INJECTION (MEMPERBAIKI TOMBOL, INPUT & SIDEBAR) ---
+    st.markdown(f"""
+        <style>
+        /* Memaksa background app dan header */
+        .stApp, .stApp > header {{
+            background-color: {T['bg']} !important;
+        }}
+        
+        /* Memaksa background sidebar menembus layer terdalam */
+        section[data-testid="stSidebar"], section[data-testid="stSidebar"] > div {{
+            background-color: {T['surface']} !important; 
+            border-right: 1px solid {T['sidebar_border']} !important; 
+        }}
+        
+        /* Memaksa SEMUA jenis teks berubah warna */
+        html, body, p, h1, h2, h3, h4, h5, h6, span, label, li, .stMarkdown, .stText, .b-table th, .b-table td {{
+            color: {T['text_primary']} !important;
+        }}
+
+        /* Perbaikan Tombol agar background tidak putih */
+        .stButton > button {{
+            background-color: {T['bg']} !important;
+            color: {T['text_primary']} !important;
+            border: 1px solid {T['sidebar_border']} !important;
+        }}
+        .stButton > button:hover {{
+            border-color: {T['accent']} !important;
+            color: {T['accent']} !important;
+        }}
+        
+        /* Tombol Utama (Masuk, Daftar, Simpan) */
+        .stButton > button[kind="primary"] {{
+            background-color: {T['accent']} !important;
+            color: #ffffff !important;
+            border: none !important;
+        }}
+
+        /* Perbaikan Kotak Input & Selectbox */
+        .stTextInput input, .stNumberInput input, .stDateInput input, .stPasswordInput input {{
+            background-color: {T['bg']} !important;
+            color: {T['text_primary']} !important;
+            border: 1px solid {T['sidebar_border']} !important;
+        }}
+        div[data-baseweb="select"] > div {{
+            background-color: {T['bg']} !important;
+            color: {T['text_primary']} !important;
+            border: 1px solid {T['sidebar_border']} !important;
+        }}
+
+        /* Perbaikan Kotak Chat Chatbot AI */
+        .stChatInputContainer {{
+            background-color: {T['surface']} !important;
+            border: 1px solid {T['sidebar_border']} !important;
+        }}
+        .stChatInputContainer textarea {{
+            color: {T['text_primary']} !important;
+        }}
+        ::placeholder {{ color: {T['text_primary']} !important; opacity: 0.5 !important; }}
+        </style>
+    """, unsafe_allow_html=True)
+    # --------------------------------------------
     
     # 1. Ambil email user
     user_email = st.session_state.user.email if st.session_state.user else "user@example.com"
-    
+        
     # 2. Ambil nama user dari metadata Supabase atau session state
     if "full_name" in st.session_state:
         display_name = st.session_state.full_name
@@ -777,7 +872,7 @@ elif selected == "budget":
  
         col_h1, col_h2 = st.columns([3, 1])
         with col_h1:
-            judul_analisis = t("Analisis & Laporan", "Analytics & Reports")
+            judul_analisis = t("Anggaran & Tabungan", "Budget & Savings")
             st.markdown(f"<h2 style='margin-bottom: 0px; color: var(--text-color);'>{judul_analisis}</h2>", unsafe_allow_html=True)  
             sub_analisis = t("Wawasan mendalam berdasarkan aktivitas riil di Database Anda", "Deep insights based on real activities in your Database")
             st.markdown(f"<p style='color: var(--text-color); opacity: 0.7; margin-top:0px;'>{sub_analisis}</p>", unsafe_allow_html=True)
