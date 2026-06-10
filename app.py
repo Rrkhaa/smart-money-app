@@ -1496,11 +1496,13 @@ elif selected == "analysis":
 # 5. MENU: CHATBOT
 # ==========================================
 elif selected == "chatbot":
-    import anthropic
+    import google.generativeai as genai
  
     judul_chatbot = t("🤖 AI Penasihat Keuangan", "🤖 AI Financial Advisor")
     sub_chatbot = t("Tanyakan insight, tips keuangan, atau analisis pengeluaran Anda secara real-time.", "Ask for financial insights, tips, or analyze your expenses in real-time.")
- 
+    
+    nama_user = st.session_state.user.email
+
     st.markdown(f"## {judul_chatbot}")
     st.markdown(f"<p style='color: var(--text-color); opacity: 0.7;'>{sub_chatbot}</p>", unsafe_allow_html=True)
     # --- Siapkan konteks data keuangan untuk dikirim ke AI ---
@@ -1516,12 +1518,8 @@ elif selected == "chatbot":
  
         # Budget
         try:
-            supabase = st.session_state.supabase
-            user_id = st.session_state.user.id
-            res_budget = supabase.table("budget").select("*").eq("user_id", user_id).execute()
-            df_budget_ctx = pd.DataFrame(res_budget.data)
+            df_budget_ctx = pd.read_sql_query("SELECT * FROM budget", conn)
             if not df_budget_ctx.empty:
-                df_budget_ctx = df_budget_ctx.drop(columns=["user_id"], errors="ignore")
                 lines.append("\n=== SETTING BUDGET PER KATEGORI ===")
                 lines.append(df_budget_ctx.to_string(index=False))
         except:
@@ -1529,12 +1527,8 @@ elif selected == "chatbot":
  
         # Target tabungan
         try:
-            supabase = st.session_state.supabase
-            user_id = st.session_state.user.id
-            res_target = supabase.table("target").select("*").eq("user_id", user_id).execute()
-            df_target_ctx = pd.DataFrame(res_target.data)
+            df_target_ctx = pd.read_sql_query("SELECT * FROM target", conn)
             if not df_target_ctx.empty:
-                df_target_ctx = df_target_ctx.drop(columns=["user_id"], errors="ignore")
                 lines.append("\n=== TARGET TABUNGAN ===")
                 lines.append(df_target_ctx.to_string(index=False))
         except:
@@ -1542,12 +1536,8 @@ elif selected == "chatbot":
  
         # Transaksi harian terakhir
         try:
-            supabase = st.session_state.supabase
-            user_id = st.session_state.user.id
-            res_harian = supabase.table("harian").select("*").eq("user_id", user_id).order("id", desc=True).limit(10).execute()
-            df_harian_ctx = pd.DataFrame(res_harian.data)
+            df_harian_ctx = pd.read_sql_query("SELECT * FROM harian ORDER BY id DESC LIMIT 10", conn)
             if not df_harian_ctx.empty:
-                df_harian_ctx = df_harian_ctx.drop(columns=["user_id"], errors="ignore")
                 lines.append("\n=== 10 TRANSAKSI HARIAN TERAKHIR ===")
                 lines.append(df_harian_ctx.to_string(index=False))
         except:
@@ -1555,7 +1545,7 @@ elif selected == "chatbot":
  
         return "\n".join(lines) if lines else "Belum ada data keuangan tersedia."
  
-    SYSTEM_PROMPT = f"""Kamu adalah AI Financial Advisor bernama SmartMoney Assistant untuk pengguna dengan email {st.session_state.user.email}.
+    SYSTEM_PROMPT = f"""Kamu adalah AI Financial Advisor bernama SmartMoney Assistant untuk pengguna bernama {nama_user}.
 Kamu adalah asisten keuangan yang cerdas, ramah, dan berbicara dalam Bahasa Indonesia.
 Tugasmu adalah membantu pengguna memahami kondisi keuangan mereka, memberikan saran penghematan, 
 tips investasi, dan analisis berdasarkan data nyata pengguna.
@@ -1577,7 +1567,7 @@ Panduan menjawab:
         st.session_state.chat_history = [
             {
                 "role": "assistant",
-                "content": "Halo John! 👋 Saya SmartMoney Assistant, AI Advisor keuangan Anda.\n\nSaya sudah membaca data keuangan Anda dan siap membantu menganalisis pengeluaran, memberikan tips menabung, atau menjawab pertanyaan finansial apapun. Apa yang ingin Anda diskusikan hari ini?"
+                "content": f"Halo {nama_user}! 👋 Saya SmartMoney Assistant, AI Advisor keuangan Anda.\n\nSaya sudah membaca data keuangan Anda dan siap membantu menganalisis pengeluaran, memberikan tips menabung, atau menjawab pertanyaan finansial apapun. Apa yang ingin Anda diskusikan hari ini?"
             }
         ]
  
@@ -1599,7 +1589,8 @@ Panduan menjawab:
         with st.chat_message("assistant"):
             with st.spinner("SmartMoney sedang menganalisis..."):
                 try:
-                    client = anthropic.Anthropic()
+                    genai.configure(api_key=st.secrets.get("GEMINI_API_KEY", "YOUR_API_KEY"))
+                    model= genai.GenerativeModel("gemini-2.5-flash")
  
                     # Bangun messages (hanya role user & assistant, tanpa system)
                     api_messages = [
@@ -1607,26 +1598,26 @@ Panduan menjawab:
                         for m in st.session_state.chat_history
                         if m["role"] in ("user", "assistant")
                     ]
+
+                    full_prompt = f"""
+
+                    {SYSTEM_PROMPT}
+
+                    {api_messages}
+
+
+                    {prompt}
+
+                    """
  
-                    response_obj = client.messages.create(
-                        model="claude-sonnet-4-5",
-                        max_tokens=1024,
-                        system=SYSTEM_PROMPT,
-                        messages=api_messages
+                    response_obj = model.generate_content(
+                        full_prompt,
                     )
  
-                    ai_response = response_obj.content[0].text
+                    ai_response = response_obj.text
                     st.markdown(ai_response)
                     st.session_state.chat_history.append({"role": "assistant", "content": ai_response})
  
-                except anthropic.AuthenticationError:
-                    err_msg = "⚠️ **API Key tidak valid.** Pastikan variabel lingkungan `ANTHROPIC_API_KEY` sudah diset dengan benar."
-                    st.error(err_msg)
-                    st.session_state.chat_history.append({"role": "assistant", "content": err_msg})
-                except anthropic.RateLimitError:
-                    err_msg = "⚠️ **Batas penggunaan API tercapai.** Silakan coba beberapa saat lagi."
-                    st.warning(err_msg)
-                    st.session_state.chat_history.append({"role": "assistant", "content": err_msg})
                 except Exception as e:
                     err_msg = f"⚠️ **Terjadi kesalahan:** {str(e)}"
                     st.error(err_msg)
@@ -1640,7 +1631,7 @@ Panduan menjawab:
             st.session_state.chat_history = [
                 {
                     "role": "assistant",
-                    "content": "Halo John! 👋 Percakapan baru dimulai. Ada yang ingin Anda diskusikan tentang keuangan Anda?"
+                    "content": f"Halo {nama_user}! 👋 Percakapan baru dimulai. Ada yang ingin Anda diskusikan tentang keuangan Anda?"
                 }
             ]
             st.rerun()
