@@ -622,7 +622,7 @@ if selected == "dashboard":
                     {'range': [10, 20], 'color': 'rgba(245, 158, 11, 0.2)'},
                     {'range': [20, 50], 'color': 'rgba(16, 185, 129, 0.2)'} 
                 ],
-                'threshold': {'line': {'color': "var(--text-color)", 'width': 4}, 'thickness': 0.75, 'value': 20 }
+                'threshold': {'line': {'color': "var(--text-color)", 'width': 4}, 'thickness': 0.75, 'value': rasio_tabungan }
             }
         ))
         fig_gauge.update_layout(height=280, margin=dict(t=20, b=20, l=20, r=20), paper_bgcolor="rgba(0,0,0,0)", font=dict(color="gray"))
