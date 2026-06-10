@@ -825,7 +825,18 @@ elif selected == "transaction":
                 "nominal": "Nominal", "deskripsi": "Deskripsi"
             })
             df_harian_display['Deskripsi'] = df_harian_display['Deskripsi'].replace('', '-').fillna('-')
-            df_harian_display['Nominal'] = df_harian_display['Nominal'].apply(lambda x: format_rp(x))
+            
+            # --- MODIFIKASI: Menambahkan Simbol Panah ---
+            def format_nom_with_arrow(row):
+                nom_str = format_rp(row['Nominal'])
+                if row['Kategori'] == "Pemasukan" or row['Kategori'] == "Income":
+                    return f"▲ {nom_str}"
+                else:
+                    return f"▼ {nom_str}"
+                    
+            df_harian_display['Nominal'] = df_harian_display.apply(format_nom_with_arrow, axis=1)
+            # --------------------------------------------
+            
             df_harian_final = df_harian_display[['Tanggal', 'Kategori', 'Nominal', 'Deskripsi']]
             
             col_tgl = t("Tanggal", "Date")
@@ -834,11 +845,29 @@ elif selected == "transaction":
             col_desk = t("Deskripsi", "Description")
             df_harian_final.columns = [col_tgl, col_kat, col_nom, col_desk]
             
-            st.dataframe(df_harian_final, use_container_width=True, hide_index=True)
+            # --- MODIFIKASI: Memberikan Warna Hijau/Merah pada Kolom Nominal ---
+            def color_nominal(val):
+                if isinstance(val, str):
+                    if '▲' in val:
+                        return 'color: #10B981; font-weight: 600;' # Hijau Emerald
+                    elif '▼' in val:
+                        return 'color: #EF4444; font-weight: 600;' # Merah
+                return ''
+            
+            # Gunakan Pandas Styler untuk mewarnai teks secara dinamis
+            try:
+                # Untuk Pandas versi terbaru
+                styled_df = df_harian_final.style.map(color_nominal, subset=[col_nom])
+            except AttributeError:
+                # Fallback jika menggunakan Pandas versi lama
+                styled_df = df_harian_final.style.applymap(color_nominal, subset=[col_nom])
+                
+            st.dataframe(styled_df, use_container_width=True, hide_index=True)
+            # -------------------------------------------------------------------------
             
             # --- FITUR HAPUS TRANSAKSI ---
             st.write("---")
-            lbl_expander_del = t("🗑️ Hapus Transaksi (Revisi/Batal)", "🗑️ Delete Transaction (Undo/Revise)")
+            lbl_expander_del = t(" Hapus Transaksi (Revisi/Batal)", " Delete Transaction (Undo/Revise)")
             with st.expander(lbl_expander_del):
                 # Buat dictionary untuk opsi dropdown
                 opsi_hapus = {}
@@ -929,7 +958,7 @@ elif selected == "budget":
         df_budget = pd.DataFrame(columns=["kategori", "nominal"])
         df_goals = pd.DataFrame(columns=["tujuan", "target", "terkumpul"])
 
-    tab1, tab2 = st.tabs(["💰 Budgets", "🎯 Savings Goals"])
+    tab1, tab2 = st.tabs([" Budgets", " Savings Goals"])
     
     with tab1:
         budget_dict = dict(zip(df_budget['kategori'], df_budget['nominal'])) if not df_budget.empty else {}
@@ -977,7 +1006,7 @@ elif selected == "budget":
                         b_investasi = st.number_input("📈 Investasi", min_value=0, step=50000, value=int(budget_dict.get("Investasi", 0)))
                         
                     # Tombol submit yang mengambil lebar penuh wadah (use_container_width=True)
-                    btn_simpan_teks = t("💾 Simpan Anggaran", "💾 Save Budget")
+                    btn_simpan_teks = t(" Simpan Anggaran", " Save Budget")
                     submit_budget = st.form_submit_button(btn_simpan_teks, type="primary", use_container_width=True)
                     
                     if submit_budget:
@@ -1107,7 +1136,7 @@ elif selected == "budget":
  
         if st.session_state.get('show_saving_form', False):
             with st.container(border=True):
-                st.markdown(f"#### 🎯 {btn_buat_target.replace('➕ ', '')}")
+                st.markdown(f"#### {btn_buat_target.replace('➕ ', '')}")
                 with st.form("form_tambah_goal"):
                     cg1, cg2 = st.columns(2)
                     with cg1:
