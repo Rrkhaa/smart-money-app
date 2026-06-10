@@ -446,10 +446,10 @@ with st.sidebar:
         st.session_state.full_name = display_name
     
     # 3. Tampilkan nama dan email secara dinamis
-    st.markdown(f"🧑‍💼 **{display_name}**\n\n{user_email}")
+    st.markdown(f" **{display_name}**\n\n{user_email}")
     
     st.write("")
-    if st.button(t("🚪 Keluar", "🚪 Logout"), use_container_width=True):
+    if st.button(t(" Keluar", " Logout"), use_container_width=True):
         st.session_state.user = None
         st.session_state.session = None
         st.rerun()
@@ -543,6 +543,31 @@ if selected == "dashboard":
             xaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)', zeroline=False), yaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)', zeroline=False)
         )
         st.plotly_chart(fig, use_container_width=True)
+    
+    # --- TAMBAHAN: Interpretasi AI untuk Pola Pengeluaran ---
+        if not df_filtered.empty:
+            latest_month = df_filtered.iloc[-1]
+            bulan_nama = latest_month['Bulan'].strftime('%B %Y')
+            surplus_defisit = latest_month['Pemasukan'] - latest_month['Total Pengeluaran']
+            
+            # Mencari bulan dengan pengeluaran tertinggi dalam filter saat ini
+            row_terboros = df_filtered.loc[df_filtered['Total Pengeluaran'].idxmax()]
+            nama_bulan_boros = row_terboros['Bulan'].strftime('%B %Y')
+
+            if surplus_defisit >= 0:
+                # Kondisi Surplus (Uang Sisa)
+                st.success(t(
+                    f"**Interpretasi AI:** Pada periode **{bulan_nama}**, arus kas Anda positif dengan sisa dana **{format_rp(surplus_defisit)}**. Namun, perhatikan lonjakan pengeluaran tertinggi Anda yang terjadi pada bulan **{nama_bulan_boros}**.",
+                    f"**AI Interpretation:** In **{bulan_nama}**, your cash flow is positive with a surplus of **{format_rp(surplus_defisit)}**. However, watch out for your peak spending which occurred in **{nama_bulan_boros}**."
+                ))
+            else:
+                # Kondisi Defisit (Besar pasak daripada tiang)
+                st.error(t(
+                    f"**Interpretasi AI:** Waspada! Pada bulan **{bulan_nama}**, pengeluaran Anda melebihi pemasukan (Defisit **{format_rp(abs(surplus_defisit))}**). Segera evaluasi pengeluaran di bulan **{nama_bulan_boros}** yang tercatat sangat tinggi.",
+                    f"**AI Interpretation:** Alert! In **{bulan_nama}**, your expenses exceeded your income (Deficit **{format_rp(abs(surplus_defisit))}**). Immediately evaluate expenses in **{nama_bulan_boros}** which were recorded as very high."
+                ))
+        else:
+            st.info(t("**Interpretasi AI:** Belum ada data tren untuk dianalisis.", "**AI Interpretation:** No trend data available for analysis."))
 
     with col_ai:
         kategori = ['Sewa', 'Kebutuhan Pokok', 'Transportasi', 'Hiburan', 'Tagihan', 'Makan']
@@ -627,7 +652,7 @@ if selected == "dashboard":
         ))
         fig_gauge.update_layout(height=280, margin=dict(t=20, b=20, l=20, r=20), paper_bgcolor="rgba(0,0,0,0)", font=dict(color="gray"))
         st.plotly_chart(fig_gauge, use_container_width=True)
-
+    
     with col_rule:
         judul_proporsi = t("Cek Proporsi 50/30/20", "Check 50/30/20 Rule")
         sub_proporsi = t("Berdasarkan aturan finansial ideal", "Based on ideal financial proportions")
@@ -667,6 +692,40 @@ if selected == "dashboard":
             </div>
         </div>
         </div>""", unsafe_allow_html=True)
+    
+    # --- BARIS BARU: KHUSUS UNTUK KOTAK AI AGAR SEJAJAR ---
+    col_ai_health, col_ai_rule = st.columns([1, 1.2])
+
+    with col_ai_health:
+        # --- Interpretasi AI untuk Gauge ---
+        if rasio_tabungan >= 20:
+            st.success(t(
+                f"**Interpretasi AI:** Rasio tabungan Anda (**{rasio_tabungan:.1f}%**) sudah sangat ideal dan sehat!", 
+                f"**AI Interpretation:** Your savings ratio (**{rasio_tabungan:.1f}%**) is very ideal and healthy!"
+            ))
+        else:
+            st.success(t(
+                f"**Interpretasi AI:** Rasio tabungan Anda (**{rasio_tabungan:.1f}%**) masih di bawah target ideal 20%.", 
+                f"**AI Interpretation:** Your savings ratio (**{rasio_tabungan:.1f}%**) is still below the 20% ideal target."
+            ))
+
+    with col_ai_rule:
+        # --- Interpretasi AI untuk Aturan 50/30/20 ---
+        warnings = []
+        if pct_needs > 50: warnings.append(t("Kebutuhan Pokok", "Basic Needs"))
+        if pct_wants > 30: warnings.append(t("Keinginan", "Wants"))
+        
+        if not warnings:
+            st.success(t(
+                "**Interpretasi AI:** Luar biasa! Alokasi pengeluaran Kebutuhan dan Keinginan Anda sangat terkendali.", 
+                "**AI Interpretation:** Excellent! Your Needs and Wants allocations are well controlled."
+            ))
+        else:
+            kats = ", ".join(warnings)
+            st.success(t(
+                f"**Interpretasi AI:** Waspada, alokasi **{kats}** Anda telah melewati batas ideal finansial.", 
+                f"**AI Interpretation:** Caution, your **{kats}** allocation has exceeded the ideal financial limits."
+            ))
  
 # ==========================================
 # 2. MENU: TRANSAKSI 
@@ -1364,16 +1423,27 @@ elif selected == "analysis":
                 with c4: st.markdown(f'<div style="{style_kartu}"><p style="{style_teks}">{lbl_rata_rata}</p><h3 style="color:#F59E0B; margin:5px 0 0 0;">{avg_savings_rate:.1f}%</h3></div>', unsafe_allow_html=True)
                 st.write("<br>", unsafe_allow_html=True)
  
-                judul_grafik_1 = t("1. Tren Arus Kas Bulanan", "1. Monthly Cash Flow Trend")
+                judul_grafik_1 = t(" Tren Arus Kas Bulanan", " Monthly Cash Flow Trend")
                 st.markdown(f"#### {judul_grafik_1} ({teks_periode})")
 
                 nama_pemasukan = t("Pemasukan", "Income")
                 nama_pengeluaran = t("Pengeluaran", "Expenses")
 
                 fig_trend = go.Figure()
-                fig_trend.add_trace(go.Bar(x=df_filtered['Bulan'].dt.strftime('%b %Y'), y=df_filtered['Pemasukan'], name='Pemasukan', marker_color='#10B981'))
-                fig_trend.add_trace(go.Bar(x=df_filtered['Bulan'].dt.strftime('%b %Y'), y=df_filtered['Total Pengeluaran'], name='Pengeluaran', marker_color='#EF4444'))
-                fig_trend.update_layout(barmode='group', margin=dict(t=20, b=20, l=0, r=0), legend=dict(orientation="h", y=1.1), plot_bgcolor='rgba(0,0,0,0)')
+                # Mengubah Bar menjadi Scatter (garis + titik)
+                fig_trend.add_trace(go.Scatter(x=df_filtered['Bulan'].dt.strftime('%b %Y'), y=df_filtered['Pemasukan'], name=nama_pemasukan, mode='lines+markers', line=dict(color='#10B981', width=3), marker=dict(size=8)))
+                fig_trend.add_trace(go.Scatter(x=df_filtered['Bulan'].dt.strftime('%b %Y'), y=df_filtered['Total Pengeluaran'], name=nama_pengeluaran, mode='lines+markers', line=dict(color='#EF4444', width=3), marker=dict(size=8)))
+                
+                # Menambahkan paper_bgcolor transparan dan grid tipis
+                fig_trend.update_layout(
+                    margin=dict(t=20, b=20, l=0, r=0), 
+                    legend=dict(orientation="h", y=1.1), 
+                    plot_bgcolor='rgba(0,0,0,0)', 
+                    paper_bgcolor='rgba(0,0,0,0)', # Ini yang membuat putihnya hilang!
+                    xaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)'),
+                    yaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)'),
+                    font=dict(color="var(--text-color)")
+                )
                 st.plotly_chart(fig_trend, use_container_width=True)
                 
                 bulan_terboros = df_filtered.loc[df_filtered['Total Pengeluaran'].idxmax()]
@@ -1382,13 +1452,13 @@ elif selected == "analysis":
                     f"**Interpretasi AI:** Pada periode ini, Anda mencetak rekor tabungan tertinggi pada **{bulan_paling_cuan['Bulan'].strftime('%B %Y')}** dengan sisa uang {format_rp(bulan_paling_cuan['Tabungan'])}. Namun, waspadai pengeluaran Anda karena bulan **{bulan_terboros['Bulan'].strftime('%B %Y')}** tercatat sebagai bulan paling boros.",
                     f"**AI Interpretation:** In this period, you hit your highest savings record in **{bulan_paling_cuan['Bulan'].strftime('%B %Y')}** with {format_rp(bulan_paling_cuan['Tabungan'])} remaining. However, watch your spending because **{bulan_terboros['Bulan'].strftime('%B %Y')}** was your most wasteful month."
                 )
-                st.info(msg_tren_ai)
+                st.success(msg_tren_ai)
                 
                 st.write("---")
  
                 col_g1, col_g2 = st.columns(2)
                 with col_g1:
-                    judul_distribusi = t("2. Distribusi Pengeluaran", "2. Expense Distribution")
+                    judul_distribusi = t(" Distribusi Pengeluaran", " Expense Distribution")
                     st.markdown(f"#### {judul_distribusi} ({teks_periode})")
                     nilai_pengeluaran = [df_filtered[kat].sum() for kat in kategori_valid]
                     df_pie = pd.DataFrame({'Kategori': kategori_valid, 'Nominal': nilai_pengeluaran})
@@ -1396,7 +1466,13 @@ elif selected == "analysis":
                     if not df_pie.empty:
                         fig_pie = px.pie(df_pie, values='Nominal', names='Kategori', hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
                         fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-                        fig_pie.update_layout(margin=dict(t=10, b=10, l=0, r=0), showlegend=False)
+                        fig_pie.update_layout(
+                            margin=dict(t=10, b=10, l=0, r=0), 
+                            showlegend=False, 
+                            paper_bgcolor='rgba(0,0,0,0)', 
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            font=dict(color="var(--text-color)")
+                        )
                         st.plotly_chart(fig_pie, use_container_width=True)
                         kategori_bocor = df_pie.loc[df_pie['Nominal'].idxmax()]
                         persentase_bocor = (kategori_bocor['Nominal'] / df_pie['Nominal'].sum()) * 100
@@ -1409,7 +1485,7 @@ elif selected == "analysis":
                     else: st.write("Belum ada pengeluaran pada periode ini.")
  
                 with col_g2:
-                    judul_budget = t("3. Budget vs Aktual", "3. Budget vs Actual")
+                    judul_budget = t(" Budget vs Aktual", " Budget vs Actual")
                     st.markdown(f"#### {judul_budget} ({teks_periode})")
                     
                     if not df_budget.empty:
@@ -1421,9 +1497,22 @@ elif selected == "analysis":
                         df_budget_chart = pd.DataFrame({'Kategori': budget_kategori, 'Target Budget': [n * jumlah_bulan for n in budget_nominal], 'Aktual Terpakai': aktual_nominal})
                         
                         fig_budget = go.Figure()
-                        fig_budget.add_trace(go.Bar(x=df_budget_chart['Kategori'], y=df_budget_chart['Target Budget'], name='Total Limit', marker_color='#E2E8F0'))
-                        fig_budget.add_trace(go.Bar(x=df_budget_chart['Kategori'], y=df_budget_chart['Aktual Terpakai'], name='Total Aktual', marker_color='#3B82F6'))
-                        fig_budget.update_layout(barmode='overlay', margin=dict(t=10, b=10, l=0, r=0), legend=dict(orientation="h", y=1.1), plot_bgcolor='rgba(0,0,0,0)')
+                        fig_budget.add_trace(go.Bar(x=df_budget_chart['Kategori'], y=df_budget_chart['Target Budget'], name='Total Limit', marker_color='#10B981'))
+                        fig_budget.add_trace(go.Bar(x=df_budget_chart['Kategori'], y=df_budget_chart['Aktual Terpakai'], name='Total Aktual', marker_color='#EF4444'))
+                        
+                        # --- PERBAIKAN: Tambahkan paper_bgcolor dan sesuaikan warna grid ---
+                        fig_budget.update_layout(
+                            barmode='overlay', 
+                            margin=dict(t=10, b=10, l=0, r=0), 
+                            legend=dict(orientation="h", y=1.1), 
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            paper_bgcolor='rgba(0,0,0,0)', # Menghilangkan background putih
+                            xaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)'),
+                            yaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)'),
+                            font=dict(color="var(--text-color)")
+                        )
+                        # ------------------------------------------------------------------
+                        
                         fig_budget.update_traces(opacity=0.8)
                         st.plotly_chart(fig_budget, use_container_width=True)
                         
@@ -1450,7 +1539,7 @@ elif selected == "analysis":
  
                 st.write("---")
  
-                judul_target = t("4. Progres Target Tabungan Anda", "4. Your Savings Goal Progress")
+                judul_target = t(" Progres Target Tabungan Anda", " Your Savings Goal Progress")
                 st.markdown(f"#### {judul_target}")
 
             if not df_target.empty:
@@ -1564,6 +1653,9 @@ Panduan menjawab:
  
     # --- Inisialisasi riwayat chat ---
     if "chat_history" not in st.session_state:
+        # Mengambil nama dari profil di session state, default ke 'User' jika belum terisi
+        nama_user = st.session_state.get("full_name", "User")
+        
         st.session_state.chat_history = [
             {
                 "role": "assistant",
@@ -1628,6 +1720,9 @@ Panduan menjawab:
     col_reset, col_spacer = st.columns([1, 4])
     with col_reset:
         if st.button("🗑️ Reset Percakapan", use_container_width=True):
+            # Ambil kembali nama user yang aktif saat tombol reset diklik
+            nama_user = st.session_state.get("full_name", "User")
+            
             st.session_state.chat_history = [
                 {
                     "role": "assistant",
@@ -1643,13 +1738,13 @@ elif selected == "settings":
     lang = st.session_state.language
     curr = st.session_state.currency
  
-    st.title(t("⚙️ Settings Akun", "⚙️ Account Settings"))
+    st.title(t(" Settings Akun", " Account Settings"))
     col_kiri, col_kanan = st.columns(2)
  
     with col_kiri:
         # --- Profile ---
         st.markdown('<div class="summary-card">', unsafe_allow_html=True)
-        st.subheader(t("👤 Profil", "👤 Profile Settings"))
+        st.subheader(t(" Profil", " Profile Settings"))
         
         # 1. Ambil nama dari metadata Supabase (jika sudah pernah diset sebelumnya)
         user_metadata = st.session_state.user.user_metadata if hasattr(st.session_state.user, 'user_metadata') and st.session_state.user.user_metadata else {}
@@ -1685,7 +1780,7 @@ elif selected == "settings":
  
         # --- Security ---
         st.markdown('<div class="summary-card">', unsafe_allow_html=True)
-        st.subheader(t("🔒 Keamanan", "🔒 Security"))
+        st.subheader(t(" Keamanan", " Security"))
         st.button(t("Ganti Password", "Change Password"))
         st.button(t("Aktifkan Autentikasi Dua Faktor", "Enable Two-Factor Authentication"))
         st.markdown('</div>', unsafe_allow_html=True)
@@ -1693,7 +1788,7 @@ elif selected == "settings":
     with col_kanan:
         # --- Notifications ---
         st.markdown('<div class="summary-card">', unsafe_allow_html=True)
-        st.subheader(t("🔔 Notifikasi", "🔔 Notifications"))
+        st.subheader(t(" Notifikasi", " Notifications"))
         st.checkbox(t("Peringatan budget", "Budget alerts"), value=True)
         st.checkbox(t("Notifikasi transaksi", "Transaction notifications"), value=True)
         st.checkbox(t("Laporan mingguan", "Weekly reports"), value=False)
