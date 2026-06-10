@@ -72,20 +72,27 @@ if st.session_state.user is None:
             st.session_state.language = new_lang
             st.rerun()
 
-    c1, c2, c3 = st.columns([1, 2, 1])
-    c1, c2, c3 = st.columns([1, 2, 1])
-    with c2:
-        # Menambahkan logo di tengah halaman login
-        col_img1, col_img2, col_img3 = st.columns([1, 1.5, 1])
-        with col_img2:
-            st.image("logo.png", use_container_width=True)
+    # Menggunakan container untuk mengatur jarak
+    with st.container():
+        # Kolom luar untuk menengahkan seluruh konten login
+        c1, c2, c3 = st.columns([1, 2, 1])
+        with c2:
+            # Memaksa konten agak naik agar tidak perlu scroll
+            st.markdown("<style>div.block-container{padding-top: 2rem;}</style>", unsafe_allow_html=True)
+            
+            # Kolom dalam untuk mengecilkan logo
+            col_img1, col_img2, col_img3 = st.columns([1, 1, 1])
+            with col_img2:
+                # Menentukan lebar logo secara spesifik
+                st.image("logo.png", width=120)
 
-        st.markdown(f"""
-            <div style="text-align: center; margin-top: 10px; margin-bottom: 20px;">
-                <h1 style="background: linear-gradient(45deg, #10B981, #3B82F6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 44px; font-weight: 800; margin-bottom: 5px;">Smart Money</h1>
-                <p style="opacity: 0.8; font-size: 15px;">{t("Kelola keuangan Anda secara cerdas, otomatis, dan aman", "Manage your finances smartly, automatically, and securely")}</p>
-            </div>
-        """, unsafe_allow_html=True)
+            # Judul diperkecil ukurannya dan jarak atas-bawah dirapatkan
+            st.markdown(f"""
+                <div style="text-align: center; margin-top: -15px; margin-bottom: 10px;">
+                    <h2 style="background: linear-gradient(45deg, #10B981, #3B82F6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; margin-bottom: 0px;">Smart Money</h2>
+                    <p style="opacity: 0.8; font-size: 14px;">{t("Kelola keuangan Anda secara cerdas, otomatis, dan aman", "Manage your finances smartly, automatically, and securely")}</p>
+                </div>
+            """, unsafe_allow_html=True)
         
         tab_login, tab_register = st.tabs([t("Masuk", "Login"), t("Daftar Akun Baru", "Register")])
         
@@ -322,8 +329,8 @@ with st.sidebar:
         accent="#10B981"
     )
     LIGHT = dict(
-        bg="#F7FEE7",             # Latar utama: Hijau muda kekuningan sangat pudar
-        surface="#ECFCCB",        # Kartu & Sidebar: Hijau kekuningan (mirip ujung panah logo)
+        bg="#ECFCCB",             # DIUBAH: Sekarang disamakan dengan warna surface (sidebar)
+        surface="#ECFCCB",        # Kartu & Sidebar: Hijau kekuningan
         text_primary="#1E293B",   # Teks: Abu-abu kebiruan gelap agar mudah dibaca
         sidebar_border="rgba(6, 78, 59, 0.12)",
         accent="#10B981"          # Aksen tombol tetap hijau terang
@@ -476,10 +483,26 @@ if selected == "dashboard":
         df_filtered = df[df['Tahun'] == tahun_pilihan]
         teks_bawah = t(f"+ Data Tahun {tahun_pilihan}", f"+ Data for Year {tahun_pilihan}")
         
+    # 1. Ambil seluruh data anggaran dari database untuk menghitung limit bulanan
+    try:
+        supabase = st.session_state.supabase
+        user_id = st.session_state.user.id
+        res_budget_dash = supabase.table("budget").select("nominal").eq("user_id", user_id).execute()
+        budget_per_bulan = sum([row['nominal'] for row in res_budget_dash.data]) if res_budget_dash.data else 0
+    except:
+        budget_per_bulan = 0
+
+    # 2. Hitung jumlah bulan yang sedang aktif/terfilter di layar dasbor
+    jumlah_bulan_terfilter = len(df_filtered) if not df_filtered.empty else 0
+    total_alokasi_budget_period = budget_per_bulan * jumlah_bulan_terfilter
+
+    # 3. Hitung metrik dasar
     total_pemasukan = df_filtered['Pemasukan'].sum() if not df_filtered.empty else 0
     total_pengeluaran = df_filtered['Total Pengeluaran'].sum() if not df_filtered.empty else 0
     total_saldo = total_pemasukan - total_pengeluaran
-    total_tabungan = df_filtered['Tabungan'].sum() if not df_filtered.empty else 0
+    
+    # 4. RUMUS BARU DASBOR: Total Tabungan = Total Pemasukan - Total Alokasi Anggaran (sesuai periode filter)
+    total_tabungan = total_pemasukan - total_alokasi_budget_period
     
     lbl_tot_pemasukan = t("Total Pemasukan", "Total Income")
     lbl_tot_pengeluaran = t("Total Pengeluaran", "Total Expenses")
@@ -783,25 +806,28 @@ elif selected == "transaction":
     try:
         supabase = st.session_state.supabase
         user_id = st.session_state.user.id
-        res_harian = supabase.table("harian").select("*").eq("user_id", user_id).execute()
-        df_harian = pd.DataFrame(res_harian.data)
         
-        if df_harian.empty:
+        # Ambil data raw
+        res_harian = supabase.table("harian").select("*").eq("user_id", user_id).execute()
+        df_harian_raw = pd.DataFrame(res_harian.data)
+        
+        if df_harian_raw.empty:
             msg_kosong = t("Belum ada data transaksi harian. Silakan input di atas.", "No daily transaction data yet. Please input above.")
             st.info(msg_kosong)
         else:
-            df_harian = df_harian.rename(columns={
-                "tanggal": "Tanggal",
-                "kategori": "Kategori",
-                "nominal": "Nominal",
-                "deskripsi": "Deskripsi"
-            })
-            df_harian['Deskripsi'] = df_harian['Deskripsi'].replace('', '-').fillna('-')
-            df_harian['Nominal'] = df_harian['Nominal'].apply(lambda x: format_rp(x))
-            df_harian_sorted = df_harian.sort_values('id', ascending=False).reset_index(drop=True)
-            df_harian_final = df_harian_sorted[['Tanggal', 'Kategori', 'Nominal', 'Deskripsi']]
+            # Urutkan dari yang terbaru
+            df_harian_raw = df_harian_raw.sort_values('id', ascending=False).reset_index(drop=True)
             
-            # Mengubah nama kolom tabel sesuai bahasa
+            # Buat copy untuk ditampilkan di tabel agar formatnya rapi
+            df_harian_display = df_harian_raw.copy()
+            df_harian_display = df_harian_display.rename(columns={
+                "tanggal": "Tanggal", "kategori": "Kategori", 
+                "nominal": "Nominal", "deskripsi": "Deskripsi"
+            })
+            df_harian_display['Deskripsi'] = df_harian_display['Deskripsi'].replace('', '-').fillna('-')
+            df_harian_display['Nominal'] = df_harian_display['Nominal'].apply(lambda x: format_rp(x))
+            df_harian_final = df_harian_display[['Tanggal', 'Kategori', 'Nominal', 'Deskripsi']]
+            
             col_tgl = t("Tanggal", "Date")
             col_kat = t("Kategori", "Category")
             col_nom = t("Nominal", "Amount")
@@ -809,6 +835,52 @@ elif selected == "transaction":
             df_harian_final.columns = [col_tgl, col_kat, col_nom, col_desk]
             
             st.dataframe(df_harian_final, use_container_width=True, hide_index=True)
+            
+            # --- FITUR HAPUS TRANSAKSI ---
+            st.write("---")
+            lbl_expander_del = t("🗑️ Hapus Transaksi (Revisi/Batal)", "🗑️ Delete Transaction (Undo/Revise)")
+            with st.expander(lbl_expander_del):
+                # Buat dictionary untuk opsi dropdown
+                opsi_hapus = {}
+                for _, row in df_harian_raw.iterrows():
+                    label = f"{row['tanggal']} | {row['kategori']} | {format_rp(row['nominal'])} | {row['deskripsi']}"
+                    opsi_hapus[label] = row
+                    
+                lbl_pilih_hapus = t("Pilih transaksi yang salah / ingin dihapus:", "Select transaction to delete:")
+                pilihan_hapus = st.selectbox(lbl_pilih_hapus, list(opsi_hapus.keys()))
+                
+                if st.button(t("Hapus Transaksi", "Delete Transaction"), type="primary", key="btn_del_tx"):
+                    try:
+                        row_del = opsi_hapus[pilihan_hapus]
+                        
+                        # 1. Hapus dari tabel harian
+                        supabase.table("harian").delete().eq("id", row_del['id']).execute()
+                        
+                        # 2. Reverse (kembalikan) perhitungan di tabel bulanan
+                        tgl_tx = datetime.datetime.strptime(row_del['tanggal'], "%Y-%m-%d")
+                        bulan_awal = tgl_tx.replace(day=1).strftime("%Y-%m-%d")
+                        kat_tx = row_del['kategori']
+                        nom_tx = int(row_del['nominal'])
+                        
+                        res_bulanan = supabase.table("bulanan").select("*").eq("user_id", user_id).eq("Bulan", bulan_awal).execute()
+                        if res_bulanan.data:
+                            current_row = res_bulanan.data[0]
+                            update_vals = {}
+                            if kat_tx != "Pemasukan": # Jika yang dihapus adalah Pengeluaran
+                                update_vals[kat_tx] = max(0, int(current_row.get(kat_tx, 0) - nom_tx))
+                                update_vals["Total Pengeluaran"] = max(0, int(current_row.get("Total Pengeluaran", 0) - nom_tx))
+                                update_vals["Tabungan"] = int(current_row.get("Tabungan", 0) + nom_tx)
+                            else: # Jika yang dihapus adalah Pemasukan
+                                update_vals["Pemasukan"] = max(0, int(current_row.get("Pemasukan", 0) - nom_tx))
+                                update_vals["Tabungan"] = int(current_row.get("Tabungan", 0) - nom_tx)
+                                
+                            supabase.table("bulanan").update(update_vals).eq("user_id", user_id).eq("Bulan", bulan_awal).execute()
+                        
+                        st.success(t("Transaksi berhasil dihapus dan saldo bulanan telah dikembalikan!", "Transaction successfully deleted and monthly balance restored!"))
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Gagal menghapus transaksi: {e}")
+
     except Exception as e:
         msg_db_kosong = t(f"Gagal mengambil data transaksi harian dari Supabase: {e}", f"Failed to retrieve daily transactions from Supabase: {e}")
         st.info(msg_db_kosong)
@@ -1001,8 +1073,24 @@ elif selected == "budget":
         st.markdown(tabel_html, unsafe_allow_html=True)
  
     with tab2:
-        total_tabungan_all = df['Tabungan'].sum() if not df.empty else 0
+        # 1. Ambil data pemasukan dari bulan terbaru (sama seperti logika di tab1)
+        if not df.empty:
+            df_sorted = df.sort_values('Bulan')
+            latest_data_budget = df_sorted.iloc[-1]
+            total_pemasukan_bulan_ini = latest_data_budget.get('Pemasukan', 0)
+        else:
+            total_pemasukan_bulan_ini = 0
+            
+        # 2. Hitung total seluruh alokasi limit yang ada di tabel budget
+        total_alokasi_budget = df_budget['nominal'].sum() if not df_budget.empty else 0
+        
+        # 3. RUMUS BARU: Total Tabungan = Total Pemasukan Bulanan - Total Alokasi Budget Kategori
+        total_tabungan_all = total_pemasukan_bulan_ini - total_alokasi_budget
+        
+        # 4. Hitung total dana yang sudah berhasil dikumpulkan untuk target-target tabungan
         total_dialokasikan = df_goals['terkumpul'].sum() if not df_goals.empty else 0
+        
+        # 5. Sisa dana tabungan yang masih bebas dialokasikan ke target berikutnya
         sisa_tabungan = total_tabungan_all - total_dialokasikan
         
         col_sh1, col_sh2 = st.columns([3, 1])
@@ -1122,6 +1210,28 @@ elif selected == "budget":
                             st.rerun()
                         except Exception as e:
                             st.error(f"Gagal mengalokasikan dana di Supabase: {e}")
+        # --- FITUR HAPUS TARGET TABUNGAN ---
+        if not df_goals.empty:
+            lbl_expander_hapus_goal = t("🗑️ Hapus Target Tabungan", "🗑️ Delete Savings Goal")
+            with st.expander(lbl_expander_hapus_goal, expanded=False):
+                lbl_pilih_del_goal = t("Pilih target yang ingin dihapus:", "Select goal to delete:")
+                goal_to_delete = st.selectbox(lbl_pilih_del_goal, df_goals['tujuan'].tolist(), key="del_goal_select")
+                
+                if st.button(t("Hapus Target", "Delete Goal"), type="primary", key="btn_del_goal"):
+                    try:
+                        supabase = st.session_state.supabase
+                        user_id = st.session_state.user.id
+                        # Menghapus target dari tabel target
+                        supabase.table("target").delete().eq("user_id", user_id).eq("tujuan", goal_to_delete).execute()
+                        
+                        msg_del_goal = t(
+                            f"Target '{goal_to_delete}' berhasil dihapus! Saldo yang dialokasikan otomatis dikembalikan.", 
+                            f"Goal '{goal_to_delete}' successfully deleted! Allocated balance is automatically restored."
+                        )
+                        st.success(msg_del_goal)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Gagal menghapus target: {e}")
  
 # ==========================================
 # 4. MENU: ANALISIS & REPORTS
