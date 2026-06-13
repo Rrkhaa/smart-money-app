@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import datetime 
-import sqlite3
 import plotly.express as px
 import plotly.graph_objects as go
 from streamlit_option_menu import option_menu
@@ -73,14 +72,27 @@ if st.session_state.user is None:
             st.session_state.language = new_lang
             st.rerun()
 
-    c1, c2, c3 = st.columns([1, 2, 1])
-    with c2:
-        st.markdown(f"""
-            <div style="text-align: center; margin-top: 50px; margin-bottom: 20px;">
-                <h1 style="background: linear-gradient(45deg, #10B981, #3B82F6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 44px; font-weight: 800; margin-bottom: 5px;">💎 Smart Money</h1>
-                <p style="opacity: 0.8; font-size: 15px;">{t("Kelola keuangan Anda secara cerdas, otomatis, dan aman", "Manage your finances smartly, automatically, and securely")}</p>
-            </div>
-        """, unsafe_allow_html=True)
+    # Menggunakan container untuk mengatur jarak
+    with st.container():
+        # Kolom luar untuk menengahkan seluruh konten login
+        c1, c2, c3 = st.columns([1, 2, 1])
+        with c2:
+            # Memaksa konten agak naik agar tidak perlu scroll
+            st.markdown("<style>div.block-container{padding-top: 2rem;}</style>", unsafe_allow_html=True)
+            
+            # Kolom dalam untuk mengecilkan logo
+            col_img1, col_img2, col_img3 = st.columns([1, 1, 1])
+            with col_img2:
+                # Menentukan lebar logo secara spesifik
+                st.image("logo.png", width=120)
+
+            # Judul diperkecil ukurannya dan jarak atas-bawah dirapatkan
+            st.markdown(f"""
+                <div style="text-align: center; margin-top: -15px; margin-bottom: 10px;">
+                    <h2 style="background: linear-gradient(45deg, #10B981, #3B82F6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800; margin-bottom: 0px;">Smart Money</h2>
+                    <p style="opacity: 0.8; font-size: 14px;">{t("Kelola keuangan Anda secara cerdas, otomatis, dan aman", "Manage your finances smartly, automatically, and securely")}</p>
+                </div>
+            """, unsafe_allow_html=True)
         
         tab_login, tab_register = st.tabs([t("Masuk", "Login"), t("Daftar Akun Baru", "Register")])
         
@@ -265,13 +277,12 @@ st.markdown("""
 """, unsafe_allow_html=True)
  
 # ==========================================
-# SIDEBAR NAVIGATION
+# SIDEBAR NAVIGATION & THEME SYSTEM
 # ==========================================
 if st.session_state.language == "ID":
     menu_labels = ["Dasbor", "Transaksi", "Anggaran & Tabungan", "Analisis & Laporan", "Chatbot AI", "Pengaturan"]
 else:
     menu_labels = ["Dashboard", "Transaction", "Budget & Saving", "Analysis & Reports", "AI Chatbot", "Settings"]
-
 
 menu_keys = ["dashboard", "transaction", "budget", "analysis", "chatbot", "settings"]
 
@@ -283,46 +294,162 @@ if st.session_state.get("go_to_chatbot", False):
     st.session_state.go_to_chatbot = False
 
 with st.sidebar:
-    st.markdown("## 💎 Smart Money")
+    # Menambahkan logo di atas tulisan Sidebar
+    col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
+    with col_logo2:
+        st.image("logo.png", use_container_width=True)
+        
+    st.markdown("<h2 style='text-align: center; margin-top: -15px;'>Smart Money</h2>", unsafe_allow_html=True)
     st.markdown("---")
     
+    # --- TOGGLE TEMA ---
+    if "dark_theme" not in st.session_state:
+        st.session_state.dark_theme = False
+        
+    # Menghapus simbol emoji bulan
+    lbl_tema = t("Mode Gelap", "Dark Mode")
+    
+    # Membungkus dengan kolom agar posisinya di tengah
+    col_t1, col_t2, col_t3 = st.columns([0.2, 2.5, 0.1])
+    with col_t2:
+        dark_mode_aktif = st.toggle(lbl_tema, value=st.session_state.dark_theme)
+    
+    if dark_mode_aktif != st.session_state.dark_theme:
+        st.session_state.dark_theme = dark_mode_aktif
+        st.rerun()
+
+    # ==========================================
+    # PALET WARNA (TEMA HIJAU LOGO)
+    # ==========================================
+    DARK = dict(
+        bg="#022C22",             
+        surface="#064E3B",        
+        text_primary="#F8F9FA",   
+        sidebar_border="rgba(167, 243, 208, 0.16)",
+        accent="#10B981"
+    )
+    LIGHT = dict(
+        bg="#ECFCCB",             # DIUBAH: Sekarang disamakan dengan warna surface (sidebar)
+        surface="#ECFCCB",        # Kartu & Sidebar: Hijau kekuningan
+        text_primary="#1E293B",   # Teks: Abu-abu kebiruan gelap agar mudah dibaca
+        sidebar_border="rgba(6, 78, 59, 0.12)",
+        accent="#10B981"          # Aksen tombol tetap hijau terang
+    )
+    T = DARK if st.session_state.dark_theme else LIGHT
+
+    # --- PERBAIKAN WARNA SIDEBAR MENU ---
+    menu_bg_active = "#065F46" if st.session_state.dark_theme else "#10B981" 
+    menu_hover = "rgba(167, 243, 208, 0.16)" if st.session_state.dark_theme else "rgba(16, 185, 129, 0.15)"
+
     selected_label = option_menu(
         menu_title=None,
-        options=menu_labels, # Gunakan menu_labels di sini
+        options=menu_labels, 
         icons=["house", "receipt", "wallet2", "bar-chart-line", "robot", "gear"],
         menu_icon="cast",
         default_index=st.session_state.menu_index,
-        key=f"sidebar_menu_{st.session_state.menu_index}",
-       styles={
-            "container": {"padding": "10px", "background-color": "transparent"},
-            "icon": {"color": "var(--text-color)", "opacity": "0.8", "font-size": "16px"}, 
+        key=f"sidebar_menu_{st.session_state.menu_index}_{st.session_state.dark_theme}", 
+        styles={
+            # PERUBAHAN UTAMA: Jangan pakai "transparent", paksa warnanya sesuai palet T['surface']
+            "container": {"padding": "10px", "background-color": T['surface']},
+            "icon": {"color": T['text_primary'], "opacity": "0.8", "font-size": "16px"}, 
             "nav-link": {
-                "font-size": "14px", 
-                "text-align": "left", 
-                "margin":"5px 0", 
-                "border-radius": "8px", 
-                "color": "var(--text-color)", 
-                "opacity": "0.8", 
-                "--hover-color": "rgba(128,128,128,0.1)",
-                "white-space": "nowrap" 
+                "font-size": "14px", "text-align": "left", "margin":"5px 0", 
+                "border-radius": "8px", "color": T['text_primary'], 
+                "opacity": "0.8", "--hover-color": menu_hover, "white-space": "nowrap" 
             },
-            "nav-link-selected": { "background-color": "rgba(128,128,128,0.2)", "color": "var(--text-color)", "font-weight": "600", "opacity": "1" },
+            "nav-link-selected": { "background-color": menu_bg_active, "color": "#FFFFFF", "font-weight": "600", "opacity": "1" },
         }
     )
     
-    # 3. Dapatkan 'key' statis berdasarkan label yang dipilih
+    # Dapatkan 'key' statis berdasarkan label yang dipilih
     selected_idx = menu_labels.index(selected_label)
     selected = menu_keys[selected_idx]
     
     if selected_idx != st.session_state.menu_index:
         st.session_state.menu_index = selected_idx
         st.rerun()
-        
+
     st.markdown("---")
+    
+    # --- CSS INJECTION (MEMPERBAIKI TOMBOL, INPUT & SIDEBAR) ---
+    st.markdown(f"""
+        <style>
+        /* Memaksa background app dan header */
+        .stApp, .stApp > header {{
+            background-color: {T['bg']} !important;
+        }}
+        
+        /* Memaksa background sidebar menembus layer terdalam */
+        section[data-testid="stSidebar"], section[data-testid="stSidebar"] > div {{
+            background-color: {T['surface']} !important; 
+            border-right: 1px solid {T['sidebar_border']} !important; 
+        }}
+        
+        /* Memaksa SEMUA jenis teks berubah warna */
+        html, body, p, h1, h2, h3, h4, h5, h6, span, label, li, .stMarkdown, .stText, .b-table th, .b-table td {{
+            color: {T['text_primary']} !important;
+        }}
+
+        /* Perbaikan Tombol agar background tidak putih */
+        .stButton > button {{
+            background-color: {T['bg']} !important;
+            color: {T['text_primary']} !important;
+            border: 1px solid {T['sidebar_border']} !important;
+        }}
+        .stButton > button:hover {{
+            border-color: {T['accent']} !important;
+            color: {T['accent']} !important;
+        }}
+        
+        /* Tombol Utama (Masuk, Daftar, Simpan) */
+        .stButton > button[kind="primary"] {{
+            background-color: {T['accent']} !important;
+            color: #ffffff !important;
+            border: none !important;
+        }}
+
+        /* Perbaikan Kotak Input & Selectbox */
+        .stTextInput input, .stNumberInput input, .stDateInput input, .stPasswordInput input {{
+            background-color: {T['bg']} !important;
+            color: {T['text_primary']} !important;
+            border: 1px solid {T['sidebar_border']} !important;
+        }}
+        div[data-baseweb="select"] > div {{
+            background-color: {T['bg']} !important;
+            color: {T['text_primary']} !important;
+            border: 1px solid {T['sidebar_border']} !important;
+        }}
+
+        /* Perbaikan Kotak Chat Chatbot AI */
+        .stChatInputContainer {{
+            background-color: {T['surface']} !important;
+            border: 1px solid {T['sidebar_border']} !important;
+        }}
+        .stChatInputContainer textarea {{
+            color: {T['text_primary']} !important;
+        }}
+        ::placeholder {{ color: {T['text_primary']} !important; opacity: 0.5 !important; }}
+        </style>
+    """, unsafe_allow_html=True)
+    # --------------------------------------------
+    
+    # 1. Ambil email user
     user_email = st.session_state.user.email if st.session_state.user else "user@example.com"
-    st.markdown(f"🧑‍💼 **User**\n\n{user_email}")
+        
+    # 2. Ambil nama user dari metadata Supabase atau session state
+    if "full_name" in st.session_state:
+        display_name = st.session_state.full_name
+    else:
+        user_metadata = st.session_state.user.user_metadata if hasattr(st.session_state.user, 'user_metadata') and st.session_state.user.user_metadata else {}
+        display_name = user_metadata.get("full_name", "User")
+        # Simpan ke session state agar tidak perlu ngecek berulang-ulang
+        st.session_state.full_name = display_name
+    
+    # 3. Tampilkan nama dan email secara dinamis
+    st.markdown(f" **{display_name}**\n\n{user_email}")
+    
     st.write("")
-    if st.button(t("🚪 Keluar", "🚪 Logout"), use_container_width=True):
+    if st.button(t(" Keluar", " Logout"), use_container_width=True):
         st.session_state.user = None
         st.session_state.session = None
         st.rerun()
@@ -356,10 +483,26 @@ if selected == "dashboard":
         df_filtered = df[df['Tahun'] == tahun_pilihan]
         teks_bawah = t(f"+ Data Tahun {tahun_pilihan}", f"+ Data for Year {tahun_pilihan}")
         
+    # 1. Ambil seluruh data anggaran dari database untuk menghitung limit bulanan
+    try:
+        supabase = st.session_state.supabase
+        user_id = st.session_state.user.id
+        res_budget_dash = supabase.table("budget").select("nominal").eq("user_id", user_id).execute()
+        budget_per_bulan = sum([row['nominal'] for row in res_budget_dash.data]) if res_budget_dash.data else 0
+    except:
+        budget_per_bulan = 0
+
+    # 2. Hitung jumlah bulan yang sedang aktif/terfilter di layar dasbor
+    jumlah_bulan_terfilter = len(df_filtered) if not df_filtered.empty else 0
+    total_alokasi_budget_period = budget_per_bulan * jumlah_bulan_terfilter
+
+    # 3. Hitung metrik dasar
     total_pemasukan = df_filtered['Pemasukan'].sum() if not df_filtered.empty else 0
     total_pengeluaran = df_filtered['Total Pengeluaran'].sum() if not df_filtered.empty else 0
     total_saldo = total_pemasukan - total_pengeluaran
-    total_tabungan = df_filtered['Tabungan'].sum() if not df_filtered.empty else 0
+    
+    # 4. RUMUS BARU DASBOR: Total Tabungan = Total Pemasukan - Total Alokasi Anggaran (sesuai periode filter)
+    total_tabungan = total_pemasukan - total_alokasi_budget_period
     
     lbl_tot_pemasukan = t("Total Pemasukan", "Total Income")
     lbl_tot_pengeluaran = t("Total Pengeluaran", "Total Expenses")
@@ -400,6 +543,31 @@ if selected == "dashboard":
             xaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)', zeroline=False), yaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)', zeroline=False)
         )
         st.plotly_chart(fig, use_container_width=True)
+    
+    # --- TAMBAHAN: Interpretasi AI untuk Pola Pengeluaran ---
+        if not df_filtered.empty:
+            latest_month = df_filtered.iloc[-1]
+            bulan_nama = latest_month['Bulan'].strftime('%B %Y')
+            surplus_defisit = latest_month['Pemasukan'] - latest_month['Total Pengeluaran']
+            
+            # Mencari bulan dengan pengeluaran tertinggi dalam filter saat ini
+            row_terboros = df_filtered.loc[df_filtered['Total Pengeluaran'].idxmax()]
+            nama_bulan_boros = row_terboros['Bulan'].strftime('%B %Y')
+
+            if surplus_defisit >= 0:
+                # Kondisi Surplus (Uang Sisa)
+                st.success(t(
+                    f"**Interpretasi AI:** Pada periode **{bulan_nama}**, arus kas Anda positif dengan sisa dana **{format_rp(surplus_defisit)}**. Namun, perhatikan lonjakan pengeluaran tertinggi Anda yang terjadi pada bulan **{nama_bulan_boros}**.",
+                    f"**AI Interpretation:** In **{bulan_nama}**, your cash flow is positive with a surplus of **{format_rp(surplus_defisit)}**. However, watch out for your peak spending which occurred in **{nama_bulan_boros}**."
+                ))
+            else:
+                # Kondisi Defisit (Besar pasak daripada tiang)
+                st.error(t(
+                    f"**Interpretasi AI:** Waspada! Pada bulan **{bulan_nama}**, pengeluaran Anda melebihi pemasukan (Defisit **{format_rp(abs(surplus_defisit))}**). Segera evaluasi pengeluaran di bulan **{nama_bulan_boros}** yang tercatat sangat tinggi.",
+                    f"**AI Interpretation:** Alert! In **{bulan_nama}**, your expenses exceeded your income (Deficit **{format_rp(abs(surplus_defisit))}**). Immediately evaluate expenses in **{nama_bulan_boros}** which were recorded as very high."
+                ))
+        else:
+            st.info(t("**Interpretasi AI:** Belum ada data tren untuk dianalisis.", "**AI Interpretation:** No trend data available for analysis."))
 
     with col_ai:
         kategori = ['Sewa', 'Kebutuhan Pokok', 'Transportasi', 'Hiburan', 'Tagihan', 'Makan']
@@ -479,12 +647,12 @@ if selected == "dashboard":
                     {'range': [10, 20], 'color': 'rgba(245, 158, 11, 0.2)'},
                     {'range': [20, 50], 'color': 'rgba(16, 185, 129, 0.2)'} 
                 ],
-                'threshold': {'line': {'color': "var(--text-color)", 'width': 4}, 'thickness': 0.75, 'value': 20 }
+                'threshold': {'line': {'color': "var(--text-color)", 'width': 4}, 'thickness': 0.75, 'value': rasio_tabungan }
             }
         ))
         fig_gauge.update_layout(height=280, margin=dict(t=20, b=20, l=20, r=20), paper_bgcolor="rgba(0,0,0,0)", font=dict(color="gray"))
         st.plotly_chart(fig_gauge, use_container_width=True)
-
+    
     with col_rule:
         judul_proporsi = t("Cek Proporsi 50/30/20", "Check 50/30/20 Rule")
         sub_proporsi = t("Berdasarkan aturan finansial ideal", "Based on ideal financial proportions")
@@ -524,6 +692,40 @@ if selected == "dashboard":
             </div>
         </div>
         </div>""", unsafe_allow_html=True)
+    
+    # --- BARIS BARU: KHUSUS UNTUK KOTAK AI AGAR SEJAJAR ---
+    col_ai_health, col_ai_rule = st.columns([1, 1.2])
+
+    with col_ai_health:
+        # --- Interpretasi AI untuk Gauge ---
+        if rasio_tabungan >= 20:
+            st.success(t(
+                f"**Interpretasi AI:** Rasio tabungan Anda (**{rasio_tabungan:.1f}%**) sudah sangat ideal dan sehat!", 
+                f"**AI Interpretation:** Your savings ratio (**{rasio_tabungan:.1f}%**) is very ideal and healthy!"
+            ))
+        else:
+            st.success(t(
+                f"**Interpretasi AI:** Rasio tabungan Anda (**{rasio_tabungan:.1f}%**) masih di bawah target ideal 20%.", 
+                f"**AI Interpretation:** Your savings ratio (**{rasio_tabungan:.1f}%**) is still below the 20% ideal target."
+            ))
+
+    with col_ai_rule:
+        # --- Interpretasi AI untuk Aturan 50/30/20 ---
+        warnings = []
+        if pct_needs > 50: warnings.append(t("Kebutuhan Pokok", "Basic Needs"))
+        if pct_wants > 30: warnings.append(t("Keinginan", "Wants"))
+        
+        if not warnings:
+            st.success(t(
+                "**Interpretasi AI:** Luar biasa! Alokasi pengeluaran Kebutuhan dan Keinginan Anda sangat terkendali.", 
+                "**AI Interpretation:** Excellent! Your Needs and Wants allocations are well controlled."
+            ))
+        else:
+            kats = ", ".join(warnings)
+            st.success(t(
+                f"**Interpretasi AI:** Waspada, alokasi **{kats}** Anda telah melewati batas ideal finansial.", 
+                f"**AI Interpretation:** Caution, your **{kats}** allocation has exceeded the ideal financial limits."
+            ))
  
 # ==========================================
 # 2. MENU: TRANSAKSI 
@@ -663,32 +865,110 @@ elif selected == "transaction":
     try:
         supabase = st.session_state.supabase
         user_id = st.session_state.user.id
-        res_harian = supabase.table("harian").select("*").eq("user_id", user_id).execute()
-        df_harian = pd.DataFrame(res_harian.data)
         
-        if df_harian.empty:
+        # Ambil data raw
+        res_harian = supabase.table("harian").select("*").eq("user_id", user_id).execute()
+        df_harian_raw = pd.DataFrame(res_harian.data)
+        
+        if df_harian_raw.empty:
             msg_kosong = t("Belum ada data transaksi harian. Silakan input di atas.", "No daily transaction data yet. Please input above.")
             st.info(msg_kosong)
         else:
-            df_harian = df_harian.rename(columns={
-                "tanggal": "Tanggal",
-                "kategori": "Kategori",
-                "nominal": "Nominal",
-                "deskripsi": "Deskripsi"
-            })
-            df_harian['Deskripsi'] = df_harian['Deskripsi'].replace('', '-').fillna('-')
-            df_harian['Nominal'] = df_harian['Nominal'].apply(lambda x: format_rp(x))
-            df_harian_sorted = df_harian.sort_values('id', ascending=False).reset_index(drop=True)
-            df_harian_final = df_harian_sorted[['Tanggal', 'Kategori', 'Nominal', 'Deskripsi']]
+            # Urutkan dari yang terbaru
+            df_harian_raw = df_harian_raw.sort_values('id', ascending=False).reset_index(drop=True)
             
-            # Mengubah nama kolom tabel sesuai bahasa
+            # Buat copy untuk ditampilkan di tabel agar formatnya rapi
+            df_harian_display = df_harian_raw.copy()
+            df_harian_display = df_harian_display.rename(columns={
+                "tanggal": "Tanggal", "kategori": "Kategori", 
+                "nominal": "Nominal", "deskripsi": "Deskripsi"
+            })
+            df_harian_display['Deskripsi'] = df_harian_display['Deskripsi'].replace('', '-').fillna('-')
+            
+            # --- MODIFIKASI: Menambahkan Simbol Panah ---
+            def format_nom_with_arrow(row):
+                nom_str = format_rp(row['Nominal'])
+                if row['Kategori'] == "Pemasukan" or row['Kategori'] == "Income":
+                    return f"▲ {nom_str}"
+                else:
+                    return f"▼ {nom_str}"
+                    
+            df_harian_display['Nominal'] = df_harian_display.apply(format_nom_with_arrow, axis=1)
+            # --------------------------------------------
+            
+            df_harian_final = df_harian_display[['Tanggal', 'Kategori', 'Nominal', 'Deskripsi']]
+            
             col_tgl = t("Tanggal", "Date")
             col_kat = t("Kategori", "Category")
             col_nom = t("Nominal", "Amount")
             col_desk = t("Deskripsi", "Description")
             df_harian_final.columns = [col_tgl, col_kat, col_nom, col_desk]
             
-            st.dataframe(df_harian_final, use_container_width=True, hide_index=True)
+            # --- MODIFIKASI: Memberikan Warna Hijau/Merah pada Kolom Nominal ---
+            def color_nominal(val):
+                if isinstance(val, str):
+                    if '▲' in val:
+                        return 'color: #10B981; font-weight: 600;' # Hijau Emerald
+                    elif '▼' in val:
+                        return 'color: #EF4444; font-weight: 600;' # Merah
+                return ''
+            
+            # Gunakan Pandas Styler untuk mewarnai teks secara dinamis
+            try:
+                # Untuk Pandas versi terbaru
+                styled_df = df_harian_final.style.map(color_nominal, subset=[col_nom])
+            except AttributeError:
+                # Fallback jika menggunakan Pandas versi lama
+                styled_df = df_harian_final.style.applymap(color_nominal, subset=[col_nom])
+                
+            st.dataframe(styled_df, use_container_width=True, hide_index=True)
+            # -------------------------------------------------------------------------
+            
+            # --- FITUR HAPUS TRANSAKSI ---
+            st.write("---")
+            lbl_expander_del = t(" Hapus Transaksi (Revisi/Batal)", " Delete Transaction (Undo/Revise)")
+            with st.expander(lbl_expander_del):
+                # Buat dictionary untuk opsi dropdown
+                opsi_hapus = {}
+                for _, row in df_harian_raw.iterrows():
+                    label = f"{row['tanggal']} | {row['kategori']} | {format_rp(row['nominal'])} | {row['deskripsi']}"
+                    opsi_hapus[label] = row
+                    
+                lbl_pilih_hapus = t("Pilih transaksi yang salah / ingin dihapus:", "Select transaction to delete:")
+                pilihan_hapus = st.selectbox(lbl_pilih_hapus, list(opsi_hapus.keys()))
+                
+                if st.button(t("Hapus Transaksi", "Delete Transaction"), type="primary", key="btn_del_tx"):
+                    try:
+                        row_del = opsi_hapus[pilihan_hapus]
+                        
+                        # 1. Hapus dari tabel harian
+                        supabase.table("harian").delete().eq("id", row_del['id']).execute()
+                        
+                        # 2. Reverse (kembalikan) perhitungan di tabel bulanan
+                        tgl_tx = datetime.datetime.strptime(row_del['tanggal'], "%Y-%m-%d")
+                        bulan_awal = tgl_tx.replace(day=1).strftime("%Y-%m-%d")
+                        kat_tx = row_del['kategori']
+                        nom_tx = int(row_del['nominal'])
+                        
+                        res_bulanan = supabase.table("bulanan").select("*").eq("user_id", user_id).eq("Bulan", bulan_awal).execute()
+                        if res_bulanan.data:
+                            current_row = res_bulanan.data[0]
+                            update_vals = {}
+                            if kat_tx != "Pemasukan": # Jika yang dihapus adalah Pengeluaran
+                                update_vals[kat_tx] = max(0, int(current_row.get(kat_tx, 0) - nom_tx))
+                                update_vals["Total Pengeluaran"] = max(0, int(current_row.get("Total Pengeluaran", 0) - nom_tx))
+                                update_vals["Tabungan"] = int(current_row.get("Tabungan", 0) + nom_tx)
+                            else: # Jika yang dihapus adalah Pemasukan
+                                update_vals["Pemasukan"] = max(0, int(current_row.get("Pemasukan", 0) - nom_tx))
+                                update_vals["Tabungan"] = int(current_row.get("Tabungan", 0) - nom_tx)
+                                
+                            supabase.table("bulanan").update(update_vals).eq("user_id", user_id).eq("Bulan", bulan_awal).execute()
+                        
+                        st.success(t("Transaksi berhasil dihapus dan saldo bulanan telah dikembalikan!", "Transaction successfully deleted and monthly balance restored!"))
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Gagal menghapus transaksi: {e}")
+
     except Exception as e:
         msg_db_kosong = t(f"Gagal mengambil data transaksi harian dari Supabase: {e}", f"Failed to retrieve daily transactions from Supabase: {e}")
         st.info(msg_db_kosong)
@@ -737,7 +1017,7 @@ elif selected == "budget":
         df_budget = pd.DataFrame(columns=["kategori", "nominal"])
         df_goals = pd.DataFrame(columns=["tujuan", "target", "terkumpul"])
 
-    tab1, tab2 = st.tabs(["💰 Budgets", "🎯 Savings Goals"])
+    tab1, tab2 = st.tabs([" Budgets", " Savings Goals"])
     
     with tab1:
         budget_dict = dict(zip(df_budget['kategori'], df_budget['nominal'])) if not df_budget.empty else {}
@@ -752,7 +1032,7 @@ elif selected == "budget":
  
         col_h1, col_h2 = st.columns([3, 1])
         with col_h1:
-            judul_analisis = t("Analisis & Laporan", "Analytics & Reports")
+            judul_analisis = t("Anggaran & Tabungan", "Budget & Savings")
             st.markdown(f"<h2 style='margin-bottom: 0px; color: var(--text-color);'>{judul_analisis}</h2>", unsafe_allow_html=True)  
             sub_analisis = t("Wawasan mendalam berdasarkan aktivitas riil di Database Anda", "Deep insights based on real activities in your Database")
             st.markdown(f"<p style='color: var(--text-color); opacity: 0.7; margin-top:0px;'>{sub_analisis}</p>", unsafe_allow_html=True)
@@ -764,39 +1044,58 @@ elif selected == "budget":
  
         if st.session_state.get('show_budget_form', False):
             with st.container(border=True):
-                form_title = t("Atur Target Anggaran Kategori", "Set Category Budget Target")
-                st.markdown(f"#### {form_title}")
-                with st.form("form_set_budget"):
-                    col_f1, col_f2 = st.columns(2)
-                    with col_f1:
-                        lbl_pilih_kat = t("Pilih Kategori", "Select Category")
-                        kat_pilihan = st.selectbox(lbl_pilih_kat, [
-                            'Kebutuhan Pokok', 'Sewa', 'Transportasi', 'Olahraga', 
-                            'Tagihan', 'Kesehatan', 'Cicilan', 'Makan', 'Hiburan', 'Investasi'
-                        ])
-                    with col_f2:
-                        default_nom = int(budget_dict.get(kat_pilihan, 0))
-                        lbl_nom_target = t("Nominal Target Anggaran (Rp)", "Budget Target Amount (Rp)")
-                        nom_target = st.number_input(lbl_nom_target, min_value=0, value=default_nom, step=50000)
+                # Menyesuaikan judul dengan bulan dari data terakhir
+                st.markdown(f"#### Anggaran untuk {nama_bulan}")
+                
+                with st.form("form_set_budget_massal"):
+                    # Membagi menjadi 2 kolom sesuai gambar
+                    col_kiri, col_kanan = st.columns(2)
                     
-                    btn_simpan_budget = t("Simpan Target Anggaran", "Save Budget Target")
-                    submit_budget = st.form_submit_button(btn_simpan_budget, type="primary")
+                    with col_kiri:
+                        b_pokok = st.number_input("🛒 Kebutuhan Pokok", min_value=0, step=50000, value=int(budget_dict.get("Kebutuhan Pokok", 0)))
+                        b_trans = st.number_input("🚗 Transportasi", min_value=0, step=50000, value=int(budget_dict.get("Transportasi", 0)))
+                        b_tagihan = st.number_input("📱 Tagihan", min_value=0, step=50000, value=int(budget_dict.get("Tagihan", 0)))
+                        b_cicilan = st.number_input("💳 Cicilan", min_value=0, step=50000, value=int(budget_dict.get("Cicilan", 0)))
+                        b_hiburan = st.number_input("🎮 Hiburan", min_value=0, step=50000, value=int(budget_dict.get("Hiburan", 0)))
+                    with col_kanan:
+                        b_sewa = st.number_input("🏠 Sewa", min_value=0, step=50000, value=int(budget_dict.get("Sewa", 0)))
+                        b_olahraga = st.number_input("🏃 Olahraga", min_value=0, step=50000, value=int(budget_dict.get("Olahraga", 0)))
+                        b_kesehatan = st.number_input("🏥 Kesehatan", min_value=0, step=50000, value=int(budget_dict.get("Kesehatan", 0)))
+                        b_makan = st.number_input("🍽️ Makan", min_value=0, step=50000, value=int(budget_dict.get("Makan", 0)))
+                        b_investasi = st.number_input("📈 Investasi", min_value=0, step=50000, value=int(budget_dict.get("Investasi", 0)))
+                        
+                    # Tombol submit yang mengambil lebar penuh wadah (use_container_width=True)
+                    btn_simpan_teks = t(" Simpan Anggaran", " Save Budget")
+                    submit_budget = st.form_submit_button(btn_simpan_teks, type="primary", use_container_width=True)
+                    
                     if submit_budget:
                         try:
                             supabase = st.session_state.supabase
                             user_id = st.session_state.user.id
-                            supabase.table("budget").upsert({
-                                "user_id": user_id,
-                                "kategori": kat_pilihan,
-                                "nominal": int(nom_target)
-                            }).execute()
-                            msg_sukses_budget = t(f"Anggaran {kat_pilihan} berhasil diatur menjadi {format_rp(nom_target)}!", f"Budget for {kat_pilihan} successfully set to {format_rp(nom_target)}!")
-                            st.success(msg_sukses_budget)
+                            
+                            # Menggabungkan data menjadi satu list untuk proses upsert massal (batch)
+                            data_upsert = [
+                                {"user_id": user_id, "kategori": "Kebutuhan Pokok", "nominal": b_pokok},
+                                {"user_id": user_id, "kategori": "Transportasi", "nominal": b_trans},
+                                {"user_id": user_id, "kategori": "Tagihan", "nominal": b_tagihan},
+                                {"user_id": user_id, "kategori": "Cicilan", "nominal": b_cicilan},
+                                {"user_id": user_id, "kategori": "Hiburan", "nominal": b_hiburan},
+                                {"user_id": user_id, "kategori": "Sewa", "nominal": b_sewa},
+                                {"user_id": user_id, "kategori": "Olahraga", "nominal": b_olahraga},
+                                {"user_id": user_id, "kategori": "Kesehatan", "nominal": b_kesehatan},
+                                {"user_id": user_id, "kategori": "Makan", "nominal": b_makan},
+                                {"user_id": user_id, "kategori": "Investasi", "nominal": b_investasi}
+                            ]
+                            
+                            # Melakukan upsert data sekaligus ke tabel budget
+                            supabase.table("budget").upsert(data_upsert).execute()
+                            
+                            st.success(t("Semua anggaran berhasil diperbarui!", "All budgets successfully updated!"))
                             st.session_state.show_budget_form = False
                             st.rerun()
                         except Exception as e:
                             st.error(f"Gagal menyimpan anggaran ke Supabase: {e}")
- 
+     
         total_pemasukan_bulan_ini = latest_data_budget.get('Pemasukan', 0) 
         total_allocated = sum(budget_dict.values())
         total_spent = sum([latest_data_budget.get(kat, 0) for kat in budget_dict.keys()])
@@ -862,8 +1161,24 @@ elif selected == "budget":
         st.markdown(tabel_html, unsafe_allow_html=True)
  
     with tab2:
-        total_tabungan_all = df['Tabungan'].sum() if not df.empty else 0
+        # 1. Ambil data pemasukan dari bulan terbaru (sama seperti logika di tab1)
+        if not df.empty:
+            df_sorted = df.sort_values('Bulan')
+            latest_data_budget = df_sorted.iloc[-1]
+            total_pemasukan_bulan_ini = latest_data_budget.get('Pemasukan', 0)
+        else:
+            total_pemasukan_bulan_ini = 0
+            
+        # 2. Hitung total seluruh alokasi limit yang ada di tabel budget
+        total_alokasi_budget = df_budget['nominal'].sum() if not df_budget.empty else 0
+        
+        # 3. RUMUS BARU: Total Tabungan = Total Pemasukan Bulanan - Total Alokasi Budget Kategori
+        total_tabungan_all = total_pemasukan_bulan_ini - total_alokasi_budget
+        
+        # 4. Hitung total dana yang sudah berhasil dikumpulkan untuk target-target tabungan
         total_dialokasikan = df_goals['terkumpul'].sum() if not df_goals.empty else 0
+        
+        # 5. Sisa dana tabungan yang masih bebas dialokasikan ke target berikutnya
         sisa_tabungan = total_tabungan_all - total_dialokasikan
         
         col_sh1, col_sh2 = st.columns([3, 1])
@@ -880,7 +1195,7 @@ elif selected == "budget":
  
         if st.session_state.get('show_saving_form', False):
             with st.container(border=True):
-                st.markdown(f"#### 🎯 {btn_buat_target.replace('➕ ', '')}")
+                st.markdown(f"#### {btn_buat_target.replace('➕ ', '')}")
                 with st.form("form_tambah_goal"):
                     cg1, cg2 = st.columns(2)
                     with cg1:
@@ -983,6 +1298,28 @@ elif selected == "budget":
                             st.rerun()
                         except Exception as e:
                             st.error(f"Gagal mengalokasikan dana di Supabase: {e}")
+        # --- FITUR HAPUS TARGET TABUNGAN ---
+        if not df_goals.empty:
+            lbl_expander_hapus_goal = t("🗑️ Hapus Target Tabungan", "🗑️ Delete Savings Goal")
+            with st.expander(lbl_expander_hapus_goal, expanded=False):
+                lbl_pilih_del_goal = t("Pilih target yang ingin dihapus:", "Select goal to delete:")
+                goal_to_delete = st.selectbox(lbl_pilih_del_goal, df_goals['tujuan'].tolist(), key="del_goal_select")
+                
+                if st.button(t("Hapus Target", "Delete Goal"), type="primary", key="btn_del_goal"):
+                    try:
+                        supabase = st.session_state.supabase
+                        user_id = st.session_state.user.id
+                        # Menghapus target dari tabel target
+                        supabase.table("target").delete().eq("user_id", user_id).eq("tujuan", goal_to_delete).execute()
+                        
+                        msg_del_goal = t(
+                            f"Target '{goal_to_delete}' berhasil dihapus! Saldo yang dialokasikan otomatis dikembalikan.", 
+                            f"Goal '{goal_to_delete}' successfully deleted! Allocated balance is automatically restored."
+                        )
+                        st.success(msg_del_goal)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Gagal menghapus target: {e}")
  
 # ==========================================
 # 4. MENU: ANALISIS & REPORTS
@@ -1038,6 +1375,21 @@ elif selected == "analysis":
                 st.write("") 
                 lbl_pilih_thn = t("Pilih Tahun", "Select Year")
                 tahun_terpilih = st.selectbox(lbl_pilih_thn, pilihan_tahun, label_visibility="collapsed")
+                
+                # --- TAMBAHAN TOMBOL DOWNLOAD PDF ---
+                btn_pdf_label = t("📥 Unduh PDF", "📥 Download PDF")
+                if st.button(btn_pdf_label, use_container_width=True):
+                    # Memanggil fitur Print / Save as PDF bawaan browser
+                    import streamlit.components.v1 as components
+                    components.html(
+                        """
+                        <script>
+                            window.parent.print();
+                        </script>
+                        """,
+                        height=0
+                    )
+                # ------------------------------------
             
             st.write("---")
  
@@ -1071,16 +1423,27 @@ elif selected == "analysis":
                 with c4: st.markdown(f'<div style="{style_kartu}"><p style="{style_teks}">{lbl_rata_rata}</p><h3 style="color:#F59E0B; margin:5px 0 0 0;">{avg_savings_rate:.1f}%</h3></div>', unsafe_allow_html=True)
                 st.write("<br>", unsafe_allow_html=True)
  
-                judul_grafik_1 = t("1. Tren Arus Kas Bulanan", "1. Monthly Cash Flow Trend")
+                judul_grafik_1 = t(" Tren Arus Kas Bulanan", " Monthly Cash Flow Trend")
                 st.markdown(f"#### {judul_grafik_1} ({teks_periode})")
 
                 nama_pemasukan = t("Pemasukan", "Income")
                 nama_pengeluaran = t("Pengeluaran", "Expenses")
 
                 fig_trend = go.Figure()
-                fig_trend.add_trace(go.Bar(x=df_filtered['Bulan'].dt.strftime('%b %Y'), y=df_filtered['Pemasukan'], name='Pemasukan', marker_color='#10B981'))
-                fig_trend.add_trace(go.Bar(x=df_filtered['Bulan'].dt.strftime('%b %Y'), y=df_filtered['Total Pengeluaran'], name='Pengeluaran', marker_color='#EF4444'))
-                fig_trend.update_layout(barmode='group', margin=dict(t=20, b=20, l=0, r=0), legend=dict(orientation="h", y=1.1), plot_bgcolor='rgba(0,0,0,0)')
+                # Mengubah Bar menjadi Scatter (garis + titik)
+                fig_trend.add_trace(go.Scatter(x=df_filtered['Bulan'].dt.strftime('%b %Y'), y=df_filtered['Pemasukan'], name=nama_pemasukan, mode='lines+markers', line=dict(color='#10B981', width=3), marker=dict(size=8)))
+                fig_trend.add_trace(go.Scatter(x=df_filtered['Bulan'].dt.strftime('%b %Y'), y=df_filtered['Total Pengeluaran'], name=nama_pengeluaran, mode='lines+markers', line=dict(color='#EF4444', width=3), marker=dict(size=8)))
+                
+                # Menambahkan paper_bgcolor transparan dan grid tipis
+                fig_trend.update_layout(
+                    margin=dict(t=20, b=20, l=0, r=0), 
+                    legend=dict(orientation="h", y=1.1), 
+                    plot_bgcolor='rgba(0,0,0,0)', 
+                    paper_bgcolor='rgba(0,0,0,0)', # Ini yang membuat putihnya hilang!
+                    xaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)'),
+                    yaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)'),
+                    font=dict(color="var(--text-color)")
+                )
                 st.plotly_chart(fig_trend, use_container_width=True)
                 
                 bulan_terboros = df_filtered.loc[df_filtered['Total Pengeluaran'].idxmax()]
@@ -1089,13 +1452,13 @@ elif selected == "analysis":
                     f"**Interpretasi AI:** Pada periode ini, Anda mencetak rekor tabungan tertinggi pada **{bulan_paling_cuan['Bulan'].strftime('%B %Y')}** dengan sisa uang {format_rp(bulan_paling_cuan['Tabungan'])}. Namun, waspadai pengeluaran Anda karena bulan **{bulan_terboros['Bulan'].strftime('%B %Y')}** tercatat sebagai bulan paling boros.",
                     f"**AI Interpretation:** In this period, you hit your highest savings record in **{bulan_paling_cuan['Bulan'].strftime('%B %Y')}** with {format_rp(bulan_paling_cuan['Tabungan'])} remaining. However, watch your spending because **{bulan_terboros['Bulan'].strftime('%B %Y')}** was your most wasteful month."
                 )
-                st.info(msg_tren_ai)
+                st.success(msg_tren_ai)
                 
                 st.write("---")
  
                 col_g1, col_g2 = st.columns(2)
                 with col_g1:
-                    judul_distribusi = t("2. Distribusi Pengeluaran", "2. Expense Distribution")
+                    judul_distribusi = t(" Distribusi Pengeluaran", " Expense Distribution")
                     st.markdown(f"#### {judul_distribusi} ({teks_periode})")
                     nilai_pengeluaran = [df_filtered[kat].sum() for kat in kategori_valid]
                     df_pie = pd.DataFrame({'Kategori': kategori_valid, 'Nominal': nilai_pengeluaran})
@@ -1103,7 +1466,13 @@ elif selected == "analysis":
                     if not df_pie.empty:
                         fig_pie = px.pie(df_pie, values='Nominal', names='Kategori', hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
                         fig_pie.update_traces(textposition='inside', textinfo='percent+label')
-                        fig_pie.update_layout(margin=dict(t=10, b=10, l=0, r=0), showlegend=False)
+                        fig_pie.update_layout(
+                            margin=dict(t=10, b=10, l=0, r=0), 
+                            showlegend=False, 
+                            paper_bgcolor='rgba(0,0,0,0)', 
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            font=dict(color="var(--text-color)")
+                        )
                         st.plotly_chart(fig_pie, use_container_width=True)
                         kategori_bocor = df_pie.loc[df_pie['Nominal'].idxmax()]
                         persentase_bocor = (kategori_bocor['Nominal'] / df_pie['Nominal'].sum()) * 100
@@ -1116,7 +1485,7 @@ elif selected == "analysis":
                     else: st.write("Belum ada pengeluaran pada periode ini.")
  
                 with col_g2:
-                    judul_budget = t("3. Budget vs Aktual", "3. Budget vs Actual")
+                    judul_budget = t(" Budget vs Aktual", " Budget vs Actual")
                     st.markdown(f"#### {judul_budget} ({teks_periode})")
                     
                     if not df_budget.empty:
@@ -1128,9 +1497,22 @@ elif selected == "analysis":
                         df_budget_chart = pd.DataFrame({'Kategori': budget_kategori, 'Target Budget': [n * jumlah_bulan for n in budget_nominal], 'Aktual Terpakai': aktual_nominal})
                         
                         fig_budget = go.Figure()
-                        fig_budget.add_trace(go.Bar(x=df_budget_chart['Kategori'], y=df_budget_chart['Target Budget'], name='Total Limit', marker_color='#E2E8F0'))
-                        fig_budget.add_trace(go.Bar(x=df_budget_chart['Kategori'], y=df_budget_chart['Aktual Terpakai'], name='Total Aktual', marker_color='#3B82F6'))
-                        fig_budget.update_layout(barmode='overlay', margin=dict(t=10, b=10, l=0, r=0), legend=dict(orientation="h", y=1.1), plot_bgcolor='rgba(0,0,0,0)')
+                        fig_budget.add_trace(go.Bar(x=df_budget_chart['Kategori'], y=df_budget_chart['Target Budget'], name='Total Limit', marker_color='#10B981'))
+                        fig_budget.add_trace(go.Bar(x=df_budget_chart['Kategori'], y=df_budget_chart['Aktual Terpakai'], name='Total Aktual', marker_color='#EF4444'))
+                        
+                        # --- PERBAIKAN: Tambahkan paper_bgcolor dan sesuaikan warna grid ---
+                        fig_budget.update_layout(
+                            barmode='overlay', 
+                            margin=dict(t=10, b=10, l=0, r=0), 
+                            legend=dict(orientation="h", y=1.1), 
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            paper_bgcolor='rgba(0,0,0,0)', # Menghilangkan background putih
+                            xaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)'),
+                            yaxis=dict(showgrid=True, gridcolor='rgba(128,128,128,0.2)'),
+                            font=dict(color="var(--text-color)")
+                        )
+                        # ------------------------------------------------------------------
+                        
                         fig_budget.update_traces(opacity=0.8)
                         st.plotly_chart(fig_budget, use_container_width=True)
                         
@@ -1157,7 +1539,7 @@ elif selected == "analysis":
  
                 st.write("---")
  
-                judul_target = t("4. Progres Target Tabungan Anda", "4. Your Savings Goal Progress")
+                judul_target = t(" Progres Target Tabungan Anda", " Your Savings Goal Progress")
                 st.markdown(f"#### {judul_target}")
 
             if not df_target.empty:
@@ -1252,15 +1634,18 @@ elif selected == "chatbot":
  
         return "\n".join(lines) if lines else "Belum ada data keuangan tersedia."
  
-    SYSTEM_PROMPT = f"""Kamu adalah AI Financial Advisor bernama SmartMoney Assistant untuk pengguna bernama {nama_user}.
+    # Ambil nama user terlebih dahulu
+    nama_user = st.session_state.get("full_name", "User")
+
+    SYSTEM_PROMPT = f"""Kamu adalah AI Financial Advisor bernama SmartMoney Assistant.
+Kamu sedang berbicara dengan pengguna bernama {nama_user} (email: {st.session_state.user.email}).
 Kamu adalah asisten keuangan yang cerdas, ramah, dan berbicara dalam Bahasa Indonesia.
-Tugasmu adalah membantu pengguna memahami kondisi keuangan mereka, memberikan saran penghematan, 
-tips investasi, dan analisis berdasarkan data nyata pengguna.
- 
+
 Berikut adalah data keuangan terkini pengguna:
 {build_financial_context()}
- 
+
 Panduan menjawab:
+- Sapa atau sebut nama pengguna ({nama_user}) sesekali dalam balasanmu agar obrolan terasa lebih personal, ramah, dan akrab.
 - Gunakan data di atas saat menjawab pertanyaan tentang pengeluaran, pemasukan, tabungan, atau budget.
 - Berikan jawaban yang konkret, ringkas, dan actionable.
 - Gunakan format yang mudah dibaca (boleh gunakan bullet points atau angka).
@@ -1271,6 +1656,9 @@ Panduan menjawab:
  
     # --- Inisialisasi riwayat chat ---
     if "chat_history" not in st.session_state:
+        # Mengambil nama dari profil di session state, default ke 'User' jika belum terisi
+        nama_user = st.session_state.get("full_name", "User")
+        
         st.session_state.chat_history = [
             {
                 "role": "assistant",
@@ -1335,6 +1723,9 @@ Panduan menjawab:
     col_reset, col_spacer = st.columns([1, 4])
     with col_reset:
         if st.button("🗑️ Reset Percakapan", use_container_width=True):
+            # Ambil kembali nama user yang aktif saat tombol reset diklik
+            nama_user = st.session_state.get("full_name", "User")
+            
             st.session_state.chat_history = [
                 {
                     "role": "assistant",
@@ -1350,21 +1741,49 @@ elif selected == "settings":
     lang = st.session_state.language
     curr = st.session_state.currency
  
-    st.title(t("⚙️ Settings Akun", "⚙️ Account Settings"))
+    st.title(t(" Settings Akun", " Account Settings"))
     col_kiri, col_kanan = st.columns(2)
  
     with col_kiri:
         # --- Profile ---
         st.markdown('<div class="summary-card">', unsafe_allow_html=True)
-        st.subheader(t("👤 Profil", "👤 Profile Settings"))
-        st.text_input( t("Nama Lengkap", "Full Name"), value="User Smart Money")   
+        st.subheader(t(" Profil", " Profile Settings"))
+        
+        # 1. Ambil nama dari metadata Supabase (jika sudah pernah diset sebelumnya)
+        user_metadata = st.session_state.user.user_metadata if hasattr(st.session_state.user, 'user_metadata') and st.session_state.user.user_metadata else {}
+        current_name = user_metadata.get("full_name", "User SmartMoney")
+        
+        # Simpan di session_state agar tampilannya stabil
+        if "full_name" not in st.session_state:
+            st.session_state.full_name = current_name
+            
+        # 2. Tangkap inputan nama baru ke dalam variabel 'new_name'
+        new_name = st.text_input(t("Nama Lengkap", "Full Name"), value=st.session_state.full_name)
         st.text_input("Email", value=st.session_state.user.email, disabled=True)
-        st.button(t("Simpan Perubahan", "Save Changes"), type="primary")
+        
+        # 3. Beri aksi saat tombol diklik
+        if st.button(t("Simpan Perubahan", "Save Changes"), type="primary"):
+            if new_name.strip() == "":
+                st.error(t("Nama tidak boleh kosong!", "Name cannot be empty!"))
+            else:
+                try:
+                    supabase = st.session_state.supabase
+                    # Update metadata user di Supabase
+                    supabase.auth.update_user({
+                        "data": {"full_name": new_name}
+                    })
+                    
+                    # Update data di session aplikasi agar langsung berubah
+                    st.session_state.full_name = new_name
+                    st.success(t("Profil berhasil diperbarui!", "Profile successfully updated!"))
+                except Exception as e:
+                    st.error(f"Gagal menyimpan profil: {e}")
+                    
         st.markdown('</div>', unsafe_allow_html=True)
  
         # --- Security ---
         st.markdown('<div class="summary-card">', unsafe_allow_html=True)
-        st.subheader(t("🔒 Keamanan", "🔒 Security"))
+        st.subheader(t(" Keamanan", " Security"))
         st.button(t("Ganti Password", "Change Password"))
         st.button(t("Aktifkan Autentikasi Dua Faktor", "Enable Two-Factor Authentication"))
         st.markdown('</div>', unsafe_allow_html=True)
@@ -1372,18 +1791,11 @@ elif selected == "settings":
     with col_kanan:
         # --- Notifications ---
         st.markdown('<div class="summary-card">', unsafe_allow_html=True)
-        st.subheader(t("🔔 Notifikasi", "🔔 Notifications"))
+        st.subheader(t(" Notifikasi", " Notifications"))
         st.checkbox(t("Peringatan budget", "Budget alerts"), value=True)
         st.checkbox(t("Notifikasi transaksi", "Transaction notifications"), value=True)
         st.checkbox(t("Laporan mingguan", "Weekly reports"), value=False)
         st.markdown('</div>', unsafe_allow_html=True)
- 
-        # --- Appearance & Region ---
-        st.markdown('<div class="summary-card">', unsafe_allow_html=True)
-        st.subheader(t("🎨 Tampilan & Wilayah", "🎨 Appearance & Region"))
-        st.selectbox(t("Tema", "Theme"), [t("Bawaan Sistem", "System Default"), t("Terang", "Light"), t("Gelap", "Dark")])
- 
-        st.write("")
  
         # === LANGUAGE TOGGLE ===
         st.markdown(f"**{'🌐 Bahasa Aplikasi' if lang == 'ID' else '🌐 App Language'}**")
