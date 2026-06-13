@@ -1634,15 +1634,18 @@ elif selected == "chatbot":
  
         return "\n".join(lines) if lines else "Belum ada data keuangan tersedia."
  
-    SYSTEM_PROMPT = f"""Kamu adalah AI Financial Advisor bernama SmartMoney Assistant untuk pengguna bernama {nama_user}.
+    # Ambil nama user terlebih dahulu
+    nama_user = st.session_state.get("full_name", "User")
+
+    SYSTEM_PROMPT = f"""Kamu adalah AI Financial Advisor bernama SmartMoney Assistant.
+Kamu sedang berbicara dengan pengguna bernama {nama_user} (email: {st.session_state.user.email}).
 Kamu adalah asisten keuangan yang cerdas, ramah, dan berbicara dalam Bahasa Indonesia.
-Tugasmu adalah membantu pengguna memahami kondisi keuangan mereka, memberikan saran penghematan, 
-tips investasi, dan analisis berdasarkan data nyata pengguna.
- 
+
 Berikut adalah data keuangan terkini pengguna:
 {build_financial_context()}
- 
+
 Panduan menjawab:
+- Sapa atau sebut nama pengguna ({nama_user}) sesekali dalam balasanmu agar obrolan terasa lebih personal, ramah, dan akrab.
 - Gunakan data di atas saat menjawab pertanyaan tentang pengeluaran, pemasukan, tabungan, atau budget.
 - Berikan jawaban yang konkret, ringkas, dan actionable.
 - Gunakan format yang mudah dibaca (boleh gunakan bullet points atau angka).
